@@ -3,7 +3,7 @@ import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { IoArrowBack } from 'react-icons/io5';
 import { MdVerified } from 'react-icons/md';
-import { FiInstagram, FiLinkedin } from 'react-icons/fi';
+import { FiLinkedin } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 import { AiFillHeart } from 'react-icons/ai';
 

@@ -3,7 +3,7 @@ import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { RiSettings4Line } from 'react-icons/ri';
 import { MdVerified } from 'react-icons/md';
-import { FiSun, FiMoon, FiHeart, FiGrid, FiBookmark, FiShare2, FiMessageCircle, FiPlus, FiEdit2 } from 'react-icons/fi';
+import { FiSun, FiMoon, FiHeart, FiGrid, FiBookmark, FiPlus, FiEdit2 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 
 function Profile() {

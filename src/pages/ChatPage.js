@@ -28,7 +28,7 @@ const initialMessages = {
 };
 
 function ChatPage() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const navigate = useNavigate();
   const { id } = useParams();
   const chat = chatsData[id];

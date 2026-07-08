@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useTheme } from '../ThemeContext';
-import { MdVerified } from 'react-icons/md';
 import { AiFillHeart } from 'react-icons/ai';
 import { BsBookmarkFill, BsPersonPlusFill } from 'react-icons/bs';
 import { FiMessageCircle } from 'react-icons/fi';

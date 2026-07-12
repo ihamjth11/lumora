@@ -1,6 +1,6 @@
 import { auth } from "../firebase/firebaseConfig";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://lumora-x963.onrender.com/api";
 
 // ---------- Get Firebase ID Token ----------
 const getAuthToken = async () => {

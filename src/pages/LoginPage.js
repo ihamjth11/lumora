@@ -1,3 +1,4 @@
+import { loginWithGoogle, loginWithFacebook } from "../firebase/authService";
 import React, { useState } from 'react';
 import { IoArrowBack, IoEye, IoEyeOff } from 'react-icons/io5';
 
@@ -43,24 +44,26 @@ function InputField({ icon, placeholder, value, onChange, type = 'text', right }
   );
 }
 
-function SocialButton({ icon, label, onClick }) {
+function SocialButton({ icon, label, onClick, disabled }) {
   const [hovered, setHovered] = useState(false);
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         flex: 1, padding: '12px 8px',
         background: hovered ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)',
         border: hovered ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.07)',
-        borderRadius: '12px', cursor: 'pointer',
+        borderRadius: '12px', cursor: disabled ? 'not-allowed' : 'pointer',
         display: 'flex', alignItems: 'center',
         justifyContent: 'center', gap: '8px',
         transition: 'all 0.2s ease',
         transform: hovered ? 'translateY(-1px)' : 'none',
         color: 'rgba(255,255,255,0.6)',
         fontSize: '12px', fontWeight: '600', fontFamily: 'Inter',
+        opacity: disabled ? 0.5 : 1,
       }}
     >
       {icon}
@@ -77,6 +80,8 @@ function LoginPage({ onBack, onSuccess, onSignup }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [facebookLoading, setFacebookLoading] = useState(false);
   const [error, setError] = useState('');
   const [attempts, setAttempts] = useState(0);
   const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
@@ -102,6 +107,30 @@ function LoginPage({ onBack, onSuccess, onSignup }) {
         setError(`Invalid credentials. ${4 - attempts} attempts remaining.`);
       }
     }, 1500);
+  };
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    setError('');
+    const res = await loginWithGoogle();
+    setGoogleLoading(false);
+    if (res.success) {
+      onSuccess();
+    } else {
+      setError('Google login failed: ' + res.error);
+    }
+  };
+
+  const handleFacebookLogin = async () => {
+    setFacebookLoading(true);
+    setError('');
+    const res = await loginWithFacebook();
+    setFacebookLoading(false);
+    if (res.success) {
+      onSuccess();
+    } else {
+      setError('Facebook login failed: ' + res.error);
+    }
   };
 
   return (
@@ -371,19 +400,29 @@ function LoginPage({ onBack, onSuccess, onSignup }) {
 
       {/* Social */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '28px' }}>
-        <SocialButton icon={
-          <svg width="17" height="17" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-          </svg>
-        } label="Google" />
-        <SocialButton icon={
-          <svg width="17" height="17" viewBox="0 0 24 24">
-            <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-          </svg>
-        } label="Facebook" />
+        <SocialButton
+          disabled={googleLoading}
+          onClick={handleGoogleLogin}
+          icon={
+            <svg width="17" height="17" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+          }
+          label={googleLoading ? "Signing in..." : "Google"}
+        />
+        <SocialButton
+          disabled={facebookLoading}
+          onClick={handleFacebookLogin}
+          icon={
+            <svg width="17" height="17" viewBox="0 0 24 24">
+              <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+          }
+          label={facebookLoading ? "Signing in..." : "Facebook"}
+        />
         <SocialButton icon={
           <svg width="17" height="17" viewBox="0 0 814 1000">
             <path fill="white" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.4C46.7 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 71 0 130.5 46.4 174.9 46.4 42.7 0 109.2-49.1 189.2-49.1 30.4 0 110.4 2.6 173.4 66.5zm-194.3-99.5c31.7-37.5 54.3-89.7 54.3-141.9 0-7.1-.6-14.3-1.9-20.1-51.6 1.9-112.3 34.4-149.2 75.8-28.5 32.4-55.1 84.7-55.1 139.5 0 8.3 1.3 16.6 1.9 19.2 3.2.6 8.4 1.3 13.6 1.3 46.4 0 102.9-30.5 136.4-73.8z"/>

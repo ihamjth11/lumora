@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { checkUsernameAvailable, createUserProfile } from '../services/apiService';
+import { interestsList } from '../constants/interests';
 
 const steps = [
   { id: 1, title: 'Add your name', subtitle: 'Add your name so friends can find you', field: 'name', placeholder: 'Full name', type: 'text' },
@@ -7,29 +10,32 @@ const steps = [
   { id: 4, title: 'What are you interested in?', subtitle: 'Choose 3 or more topics you enjoy. This helps us personalize your experience.', field: 'interests', type: 'interests' },
 ];
 
-const interestsList = [
-  { id: 1, name: 'Artificial Intelligence', color: '#6C63FF' },
-  { id: 2, name: 'Coding', color: '#00B4D8' },
-  { id: 3, name: 'Cooking', color: '#FB8500' },
-  { id: 4, name: 'UI/UX Design', color: '#F72585' },
-  { id: 5, name: 'Science', color: '#10b981' },
-  { id: 6, name: 'Business', color: '#f59e0b' },
-  { id: 7, name: 'Language', color: '#14b8a6' },
-  { id: 8, name: 'Mathematics', color: '#ef4444' },
-  { id: 9, name: 'Photography', color: '#8b5cf6' },
-  { id: 10, name: 'Music', color: '#ec4899' },
-  { id: 11, name: 'Sports', color: '#06b6d4' },
-  { id: 12, name: 'Health', color: '#84cc16' },
-];
-
-function Onboarding({ onComplete }) {
+function Onboarding() {
+  const { currentUser, refreshProfile } = useAuth();
   const [step, setStep] = useState(0);
   const [data, setData] = useState({
-    name: '', username: '', birthday: '', interests: [],
+    name: currentUser?.displayName || '', username: '', birthday: '', interests: [],
   });
   const [error, setError] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const current = steps[step];
+
+  useEffect(() => {
+    if (current.field !== 'username' || data.username.length < 3) {
+      setUsernameStatus('');
+      return;
+    }
+    setUsernameStatus('checking');
+    const timer = setTimeout(async () => {
+      const res = await checkUsernameAvailable(data.username);
+      if (res.success) {
+        setUsernameStatus(res.available ? 'available' : 'taken');
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [data.username, current.field]);
 
   const validate = () => {
     if (current.field === 'name' && !data.name.trim()) {
@@ -39,6 +45,8 @@ function Onboarding({ onComplete }) {
       if (!data.username.trim()) { setError('Please enter a username'); return false; }
       if (data.username.includes(' ')) { setError('Username cannot contain spaces'); return false; }
       if (data.username.length < 3) { setError('Username must be at least 3 characters'); return false; }
+      if (usernameStatus === 'taken') { setError('This username is already taken'); return false; }
+      if (usernameStatus === 'checking') { setError('Please wait, checking username...'); return false; }
     }
     if (current.field === 'birthday' && !data.birthday) {
       setError('Please enter your birthday'); return false;
@@ -49,13 +57,36 @@ function Onboarding({ onComplete }) {
     return true;
   };
 
+  const handleFinish = async () => {
+    setSubmitting(true);
+    setError('');
+
+    const interestNames = data.interests.map(
+      id => interestsList.find(i => i.id === id)?.name
+    ).filter(Boolean);
+
+    const res = await createUserProfile({
+      name: data.name,
+      username: data.username,
+      birthday: data.birthday,
+      interests: interestNames,
+    });
+
+    if (res.success) {
+      await refreshProfile();
+    } else {
+      setSubmitting(false);
+      setError(res.error || 'Failed to save profile. Try again.');
+    }
+  };
+
   const handleNext = () => {
     if (!validate()) return;
     setError('');
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {
-      onComplete(data);
+      handleFinish();
     }
   };
 
@@ -79,7 +110,6 @@ function Onboarding({ onComplete }) {
       maxWidth: '480px', margin: '0 auto',
     }}>
 
-      {/* Progress bar */}
       <div style={{ height: '2px', background: '#e5e7eb' }}>
         <div style={{
           height: '100%', background: 'linear-gradient(90deg, #6C63FF, #F72585)',
@@ -87,14 +117,12 @@ function Onboarding({ onComplete }) {
         }} />
       </div>
 
-      {/* Header */}
       <div style={{
         padding: '16px 20px',
         display: 'flex', alignItems: 'center',
         justifyContent: 'space-between',
         borderBottom: '1px solid #f3f4f6',
       }}>
-        {/* Lumora Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
             width: '32px', height: '32px', borderRadius: '10px',
@@ -116,17 +144,13 @@ function Onboarding({ onComplete }) {
             lumora
           </span>
         </div>
-
-        {/* Step indicator */}
         <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: '500' }}>
           {step + 1} / {steps.length}
         </span>
       </div>
 
-      {/* Content */}
       <div style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column' }}>
 
-        {/* Title */}
         <div style={{ marginBottom: '28px' }}>
           <h1 style={{
             fontSize: '26px', fontWeight: '800',
@@ -135,15 +159,11 @@ function Onboarding({ onComplete }) {
           }}>
             {current.title}
           </h1>
-          <p style={{
-            fontSize: '13px', color: '#6b7280',
-            lineHeight: '1.6',
-          }}>
+          <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.6' }}>
             {current.subtitle}
           </p>
         </div>
 
-        {/* Fields */}
         {current.type !== 'interests' ? (
           <div>
             <div style={{
@@ -195,7 +215,6 @@ function Onboarding({ onComplete }) {
               )}
             </div>
 
-            {/* Username availability check */}
             {current.field === 'username' && data.username.length > 2 && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
@@ -203,15 +222,21 @@ function Onboarding({ onComplete }) {
               }}>
                 <div style={{
                   width: '8px', height: '8px', borderRadius: '50%',
-                  background: '#10b981',
+                  background: usernameStatus === 'available' ? '#10b981'
+                    : usernameStatus === 'taken' ? '#ef4444' : '#9ca3af',
                 }} />
-                <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '600' }}>
-                  {data.username} is available
+                <span style={{
+                  fontSize: '12px', fontWeight: '600',
+                  color: usernameStatus === 'available' ? '#10b981'
+                    : usernameStatus === 'taken' ? '#ef4444' : '#9ca3af',
+                }}>
+                  {usernameStatus === 'checking' && 'Checking availability...'}
+                  {usernameStatus === 'available' && `${data.username} is available`}
+                  {usernameStatus === 'taken' && `${data.username} is already taken`}
                 </span>
               </div>
             )}
 
-            {/* Birthday info */}
             {current.field === 'birthday' && (
               <div style={{
                 display: 'flex', alignItems: 'flex-start', gap: '8px',
@@ -230,7 +255,6 @@ function Onboarding({ onComplete }) {
             )}
           </div>
         ) : (
-          /* Interests Grid */
           <div style={{
             display: 'flex', flexWrap: 'wrap', gap: '8px',
             overflowY: 'auto', flex: 1,
@@ -265,61 +289,37 @@ function Onboarding({ onComplete }) {
           </div>
         )}
 
-        {/* Error */}
         {error && (
-          <p style={{
-            fontSize: '13px', color: '#ef4444',
-            marginTop: '10px', fontWeight: '500',
-          }}>
+          <p style={{ fontSize: '13px', color: '#ef4444', marginTop: '10px', fontWeight: '500' }}>
             {error}
           </p>
         )}
 
-        {/* Selected count for interests */}
         {current.field === 'interests' && (
-          <p style={{
-            fontSize: '13px', color: '#9ca3af',
-            marginTop: '12px',
-          }}>
+          <p style={{ fontSize: '13px', color: '#9ca3af', marginTop: '12px' }}>
             {data.interests.length} selected
             {data.interests.length < 3 ? ` (${3 - data.interests.length} more needed)` : ' ✓'}
           </p>
         )}
 
-        {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Next Button */}
         <div style={{ marginTop: '24px' }}>
           <button
             onClick={handleNext}
+            disabled={submitting}
             style={{
               width: '100%', padding: '14px',
               background: 'linear-gradient(135deg, #6C63FF, #F72585)',
               border: 'none', borderRadius: '12px',
               color: '#fff', fontSize: '15px', fontWeight: '700',
-              cursor: 'pointer', fontFamily: 'Inter',
+              cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'Inter',
               boxShadow: '0 4px 16px rgba(108,99,255,0.3)',
-              marginBottom: '12px',
+              marginBottom: '12px', opacity: submitting ? 0.7 : 1,
             }}
           >
-            {step === steps.length - 1 ? 'Finish Setup 🚀' : 'Next'}
+            {submitting ? 'Saving...' : (step === steps.length - 1 ? 'Finish Setup 🚀' : 'Next')}
           </button>
-
-          {/* Skip option for non-required steps */}
-          {step === 3 && (
-            <button
-              onClick={() => onComplete(data)}
-              style={{
-                width: '100%', padding: '12px',
-                background: 'none', border: 'none',
-                color: '#9ca3af', fontSize: '14px',
-                cursor: 'pointer', fontFamily: 'Inter',
-              }}
-            >
-              Skip for now
-            </button>
-          )}
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { RiSettings4Line } from 'react-icons/ri';
 import { MdVerified } from 'react-icons/md';
 import { FiSun, FiMoon, FiHeart, FiGrid, FiBookmark, FiPlus, FiEdit2 } from 'react-icons/fi';
@@ -8,8 +9,14 @@ import { HiSparkles } from 'react-icons/hi';
 
 function Profile() {
   const { colors, isDark, toggleTheme } = useTheme();
+  const { userProfile } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('posts');
+
+  const displayName = userProfile?.name || 'User';
+  const username = userProfile?.username || 'user';
+  const interests = userProfile?.interests || [];
+  const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
     <div style={{
@@ -34,7 +41,7 @@ function Profile() {
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}>
-          hamjath
+          {username}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={toggleTheme} style={{
@@ -69,19 +76,20 @@ function Profile() {
             background: 'linear-gradient(135deg, #6C63FF, #F72585)',
             display: 'flex', alignItems: 'center',
             justifyContent: 'center', fontSize: '32px',
+            fontWeight: '800', color: '#fff',
             flexShrink: 0,
             boxShadow: '0 4px 16px rgba(108,99,255,0.35)',
           }}>
-            🧑‍💻
+            {avatarLetter}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <h2 style={{ fontSize: '20px', fontWeight: '800', color: colors.textPrimary }}>
-                Hamjath
+                {displayName}
               </h2>
               <MdVerified style={{ color: '#6C63FF', fontSize: '18px' }} />
             </div>
-            <p style={{ fontSize: '13px', color: colors.textMuted, marginTop: '2px' }}>@hamjath</p>
+            <p style={{ fontSize: '13px', color: colors.textMuted, marginTop: '2px' }}>@{username}</p>
             <p style={{ fontSize: '13px', color: colors.textSecondary, marginTop: '4px' }}>
               Learning every day ✦
             </p>
@@ -111,7 +119,6 @@ function Profile() {
           ))}
         </div>
 
-        {/* Edit Profile Button */}
         <button
           onClick={() => navigate('/edit-profile')}
           style={{
@@ -131,27 +138,29 @@ function Profile() {
         </button>
       </div>
 
-      {/* Interests */}
-      <div style={{ padding: '0 16px 16px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '700', color: colors.textPrimary, marginBottom: '10px' }}>
-          My Interests
-        </h3>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['AI', 'Coding', 'Design', 'Cooking'].map((item, i) => (
-            <span key={i} style={{
-              background: '#6C63FF12',
-              border: '1px solid #6C63FF30',
-              color: '#6C63FF',
-              padding: '6px 14px', borderRadius: '20px',
-              fontSize: '13px', fontWeight: '700',
-              display: 'flex', alignItems: 'center', gap: '5px',
-            }}>
-              <HiSparkles style={{ fontSize: '12px' }} />
-              {item}
-            </span>
-          ))}
+      {/* Interests — real data from Firestore */}
+      {interests.length > 0 && (
+        <div style={{ padding: '0 16px 16px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: '700', color: colors.textPrimary, marginBottom: '10px' }}>
+            My Interests
+          </h3>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {interests.map((item, i) => (
+              <span key={i} style={{
+                background: '#6C63FF12',
+                border: '1px solid #6C63FF30',
+                color: '#6C63FF',
+                padding: '6px 14px', borderRadius: '20px',
+                fontSize: '13px', fontWeight: '700',
+                display: 'flex', alignItems: 'center', gap: '5px',
+              }}>
+                <HiSparkles style={{ fontSize: '12px' }} />
+                {item}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div style={{

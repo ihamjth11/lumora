@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { IoArrowBack, IoEye, IoEyeOff, IoCheckmarkCircle } from 'react-icons/io5';
+import { sendOTP, verifyOTP, linkEmailPassword, loginWithGoogle, loginWithFacebook } from '../firebase/authService';
 
 const countryCodes = [
   { code: '+94', flag: '🇱🇰', name: 'Sri Lanka' },
@@ -35,6 +36,7 @@ function SignupPage({ onBack, onSuccess, onLogin }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState('');
   const [error, setError] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
@@ -68,11 +70,19 @@ function SignupPage({ onBack, onSuccess, onLogin }) {
     return '';
   };
 
-  const handleStep1 = () => {
+  // ---------- STEP 1: Send real OTP ----------
+  const handleStep1 = async () => {
     const err = validate();
     if (err) { setError(err); return; }
     setLoading(true); setError('');
-    setTimeout(() => { setLoading(false); setStep(2); }, 1200);
+    const fullPhone = `${selectedCountry.code}${phone.replace(/^0+/, '')}`;
+    const res = await sendOTP(fullPhone);
+    setLoading(false);
+    if (res.success) {
+      setStep(2);
+    } else {
+      setError(res.error || 'Failed to send OTP. Check phone number.');
+    }
   };
 
   const handleOTPInput = (val, idx) => {
@@ -88,15 +98,45 @@ function SignupPage({ onBack, onSuccess, onLogin }) {
     }
   };
 
-  const handleVerify = () => {
+  // ---------- STEP 2: Verify OTP + Link Email/Password ----------
+  const handleVerify = async () => {
     const code = otp.join('');
     if (code.length !== 6) { setError('Enter complete 6-digit OTP'); return; }
     setLoading(true); setError('');
-    setTimeout(() => {
+
+    const res = await verifyOTP(code);
+    if (!res.success) {
       setLoading(false);
-      if (code === '123456') { setStep(3); setTimeout(() => onSuccess(), 2200); }
-      else setError('Invalid OTP. Use 123456 for demo.');
-    }, 1500);
+      setError(res.error || 'Invalid OTP');
+      return;
+    }
+
+    const linkRes = await linkEmailPassword(res.user, email, password, name);
+    setLoading(false);
+
+    if (linkRes.success) {
+      setStep(3);
+      setTimeout(() => onSuccess(), 2200);
+    } else {
+      setError(linkRes.error || 'Failed to complete signup');
+    }
+  };
+
+  // ---------- GOOGLE / FACEBOOK SIGNUP ----------
+  const handleGoogleSignup = async () => {
+    setSocialLoading('google'); setError('');
+    const res = await loginWithGoogle();
+    setSocialLoading('');
+    if (res.success) onSuccess();
+    else setError(res.error);
+  };
+
+  const handleFacebookSignup = async () => {
+    setSocialLoading('facebook'); setError('');
+    const res = await loginWithFacebook();
+    setSocialLoading('');
+    if (res.success) onSuccess();
+    else setError(res.error);
   };
 
   const filteredCountries = countryCodes.filter(c =>
@@ -134,6 +174,9 @@ function SignupPage({ onBack, onSuccess, onLogin }) {
         input[type=number]::-webkit-outer-spin-button,
         input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
       `}</style>
+
+      {/* Recaptcha (invisible, needed for Phone OTP) */}
+      <div id="recaptcha-container"></div>
 
       {/* Glow orbs */}
       <div style={{
@@ -406,6 +449,50 @@ function SignupPage({ onBack, onSuccess, onLogin }) {
             ) : 'Continue →'}
           </button>
 
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.2)', letterSpacing: '1.5px', fontWeight: '600' }}>
+              OR
+            </span>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+          </div>
+
+          {/* Social Signup */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <button onClick={handleGoogleSignup} disabled={socialLoading !== ''} style={{
+              flex: 1, padding: '12px 8px',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: '12px', cursor: socialLoading ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              color: 'rgba(255,255,255,0.6)', fontSize: '12px', fontWeight: '600', fontFamily: 'Inter',
+              opacity: socialLoading && socialLoading !== 'google' ? 0.5 : 1,
+            }}>
+              <svg width="17" height="17" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              {socialLoading === 'google' ? 'Signing up...' : 'Google'}
+            </button>
+            <button onClick={handleFacebookSignup} disabled={socialLoading !== ''} style={{
+              flex: 1, padding: '12px 8px',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: '12px', cursor: socialLoading ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              color: 'rgba(255,255,255,0.6)', fontSize: '12px', fontWeight: '600', fontFamily: 'Inter',
+              opacity: socialLoading && socialLoading !== 'facebook' ? 0.5 : 1,
+            }}>
+              <svg width="17" height="17" viewBox="0 0 24 24">
+                <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+              </svg>
+              {socialLoading === 'facebook' ? 'Signing up...' : 'Facebook'}
+            </button>
+          </div>
+
           <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.28)' }}>
             Already have an account?{' '}
             <span onClick={onLogin} style={{
@@ -443,10 +530,6 @@ function SignupPage({ onBack, onSuccess, onLogin }) {
               <span style={{ color: '#a78bfa', fontWeight: '600' }}>
                 {selectedCountry.code} {phone}
               </span>
-              <br />
-              <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)' }}>
-                Demo: use 123456
-              </span>
             </p>
           </div>
 
@@ -480,7 +563,7 @@ function SignupPage({ onBack, onSuccess, onLogin }) {
             color: 'rgba(255,255,255,0.28)', marginBottom: '20px',
           }}>
             Didn't receive the code?{' '}
-            <span style={{
+            <span onClick={handleStep1} style={{
               background: 'linear-gradient(135deg, #6C63FF, #a855f7)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               fontWeight: '700', cursor: 'pointer',

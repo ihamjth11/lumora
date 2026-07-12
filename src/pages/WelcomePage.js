@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import LoginPage from './LoginPage';
 import SignupPage from './SignupPage';
+import { loginWithGoogle, loginWithFacebook } from '../firebase/authService';
 
 const floatingCards = [
   { label: 'Artificial Intelligence', color: '#6C63FF', x: '6%', y: '15%', delay: '0s', dur: '3.2s',
@@ -52,10 +53,36 @@ function WelcomePage({ onAuthComplete }) {
   const [screen, setScreen] = useState('welcome');
   const [mounted, setMounted] = useState(false);
   const [hoveredBtn, setHoveredBtn] = useState(null);
+  const [socialLoading, setSocialLoading] = useState('');
+  const [socialError, setSocialError] = useState('');
 
   useEffect(() => {
     setTimeout(() => setMounted(true), 150);
   }, []);
+
+  const handleGoogleClick = async () => {
+    setSocialLoading('google');
+    setSocialError('');
+    const res = await loginWithGoogle();
+    setSocialLoading('');
+    if (res.success) {
+      onAuthComplete();
+    } else {
+      setSocialError(res.error);
+    }
+  };
+
+  const handleFacebookClick = async () => {
+    setSocialLoading('facebook');
+    setSocialError('');
+    const res = await loginWithFacebook();
+    setSocialLoading('');
+    if (res.success) {
+      onAuthComplete();
+    } else {
+      setSocialError(res.error);
+    }
+  };
 
   if (screen === 'login') return <LoginPage onBack={() => setScreen('welcome')} onSuccess={onAuthComplete} onSignup={() => setScreen('signup')} />;
   if (screen === 'signup') return <SignupPage onBack={() => setScreen('welcome')} onSuccess={onAuthComplete} onLogin={() => setScreen('login')} />;
@@ -80,10 +107,8 @@ function WelcomePage({ onAuthComplete }) {
         @keyframes cardPop { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1); } }
       `}</style>
 
-      {/* Stars */}
       <StarField />
 
-      {/* Ambient Orbs */}
       <div style={{ position:'absolute', top:'-15%', left:'-10%', width:'600px', height:'600px', borderRadius:'50%',
         background:'radial-gradient(circle, rgba(108,99,255,0.18) 0%, transparent 65%)',
         filter:'blur(80px)', pointerEvents:'none', animation:'orb1 6s ease infinite' }} />
@@ -94,12 +119,10 @@ function WelcomePage({ onAuthComplete }) {
         background:'radial-gradient(circle, rgba(0,180,216,0.1) 0%, transparent 65%)',
         filter:'blur(60px)', pointerEvents:'none', animation:'orb3 5s ease infinite 2s' }} />
 
-      {/* Grid */}
       <div style={{ position:'absolute', inset:0, pointerEvents:'none',
         backgroundImage:'linear-gradient(rgba(108,99,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(108,99,255,0.025) 1px, transparent 1px)',
         backgroundSize:'50px 50px' }} />
 
-      {/* Floating Cards */}
       {floatingCards.map((card, i) => (
         <div key={i} style={{
           position:'absolute', left:card.x, top:card.y,
@@ -135,7 +158,6 @@ function WelcomePage({ onAuthComplete }) {
         </div>
       ))}
 
-      {/* Main Content */}
       <div style={{
         flex:1, display:'flex', flexDirection:'column',
         alignItems:'center', justifyContent:'center',
@@ -143,7 +165,6 @@ function WelcomePage({ onAuthComplete }) {
         minHeight:'100vh',
       }}>
 
-        {/* Logo */}
         <div style={{
           display:'flex', flexDirection:'column', alignItems:'center',
           marginBottom:'36px',
@@ -158,7 +179,6 @@ function WelcomePage({ onAuthComplete }) {
             animation: mounted ? 'logoGlow 3s ease infinite' : 'none',
             position:'relative',
           }}>
-            {/* Inner shine */}
             <div style={{
               position:'absolute', top:'4px', left:'4px', right:'4px',
               height:'40%', borderRadius:'16px 16px 0 0',
@@ -185,7 +205,6 @@ function WelcomePage({ onAuthComplete }) {
             }}>
               lumora
             </h1>
-            {/* Glow under text */}
             <div style={{
               position:'absolute', bottom:'-8px', left:'50%',
               transform:'translateX(-50%)',
@@ -206,7 +225,6 @@ function WelcomePage({ onAuthComplete }) {
           </div>
         </div>
 
-        {/* Headline */}
         <div style={{
           textAlign:'center', marginBottom:'44px', maxWidth:'320px',
           opacity: mounted ? 1 : 0,
@@ -230,7 +248,6 @@ function WelcomePage({ onAuthComplete }) {
           </p>
         </div>
 
-        {/* Buttons */}
         <div style={{
           width:'100%', maxWidth:'320px',
           display:'flex', flexDirection:'column', gap:'10px',
@@ -238,7 +255,6 @@ function WelcomePage({ onAuthComplete }) {
           animation: mounted ? 'fadeUp 0.7s ease 0.25s both' : 'none',
         }}>
 
-          {/* Create Account */}
           <button
             onClick={() => setScreen('signup')}
             onMouseEnter={() => setHoveredBtn('create')}
@@ -266,7 +282,6 @@ function WelcomePage({ onAuthComplete }) {
             Create Free Account
           </button>
 
-          {/* Sign In */}
           <button
             onClick={() => setScreen('login')}
             onMouseEnter={() => setHoveredBtn('signin')}
@@ -286,7 +301,6 @@ function WelcomePage({ onAuthComplete }) {
             Sign In
           </button>
 
-          {/* Divider */}
           <div style={{ display:'flex', alignItems:'center', gap:'12px', margin:'2px 0' }}>
             <div style={{ flex:1, height:'1px', background:'rgba(255,255,255,0.06)' }} />
             <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.2)', letterSpacing:'1.5px', fontWeight:'600' }}>
@@ -295,50 +309,104 @@ function WelcomePage({ onAuthComplete }) {
             <div style={{ flex:1, height:'1px', background:'rgba(255,255,255,0.06)' }} />
           </div>
 
-          {/* Social Logins */}
+          {socialError && (
+            <div style={{
+              background: 'rgba(239,68,68,0.08)',
+              border: '1px solid rgba(239,68,68,0.2)',
+              borderRadius: '12px', padding: '10px 14px',
+              display: 'flex', alignItems: 'center', gap: '8px',
+            }}>
+              <p style={{ fontSize: '12px', color: '#f87171', fontWeight: '500' }}>{socialError}</p>
+            </div>
+          )}
+
           <div style={{ display:'flex', gap:'8px' }}>
-            {[
-              { name:'Google', icon: (
+            <button
+              onClick={handleGoogleClick}
+              disabled={socialLoading !== ''}
+              onMouseEnter={() => setHoveredBtn('social0')}
+              onMouseLeave={() => setHoveredBtn(null)}
+              style={{
+                flex:1, padding:'12px',
+                background: hoveredBtn === 'social0' ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
+                border: hoveredBtn === 'social0' ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.08)',
+                borderRadius:'12px',
+                cursor: socialLoading ? 'not-allowed' : 'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                transition:'all 0.2s ease',
+                transform: hoveredBtn === 'social0' ? 'translateY(-1px)' : 'translateY(0)',
+                opacity: socialLoading && socialLoading !== 'google' ? 0.5 : 1,
+              }}
+            >
+              {socialLoading === 'google' ? (
+                <div style={{
+                  width: '16px', height: '16px', borderRadius: '50%',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTop: '2px solid #fff',
+                  animation: 'spin 0.8s linear infinite',
+                }} />
+              ) : (
                 <svg width="18" height="18" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                   <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-              )},
-              { name:'Facebook', icon: (
+              )}
+            </button>
+
+            <button
+              onClick={handleFacebookClick}
+              disabled={socialLoading !== ''}
+              onMouseEnter={() => setHoveredBtn('social1')}
+              onMouseLeave={() => setHoveredBtn(null)}
+              style={{
+                flex:1, padding:'12px',
+                background: hoveredBtn === 'social1' ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
+                border: hoveredBtn === 'social1' ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.08)',
+                borderRadius:'12px',
+                cursor: socialLoading ? 'not-allowed' : 'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                transition:'all 0.2s ease',
+                transform: hoveredBtn === 'social1' ? 'translateY(-1px)' : 'translateY(0)',
+                opacity: socialLoading && socialLoading !== 'facebook' ? 0.5 : 1,
+              }}
+            >
+              {socialLoading === 'facebook' ? (
+                <div style={{
+                  width: '16px', height: '16px', borderRadius: '50%',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTop: '2px solid #fff',
+                  animation: 'spin 0.8s linear infinite',
+                }} />
+              ) : (
                 <svg width="18" height="18" viewBox="0 0 24 24">
                   <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                 </svg>
-              )},
-              { name:'Apple', icon: (
-                <svg width="18" height="18" viewBox="0 0 814 1000">
-                  <path fill="white" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.4C46.7 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 71 0 130.5 46.4 174.9 46.4 42.7 0 109.2-49.1 189.2-49.1 30.4 0 110.4 2.6 173.4 66.5zm-194.3-99.5c31.7-37.5 54.3-89.7 54.3-141.9 0-7.1-.6-14.3-1.9-20.1-51.6 1.9-112.3 34.4-149.2 75.8-28.5 32.4-55.1 84.7-55.1 139.5 0 8.3 1.3 16.6 1.9 19.2 3.2.6 8.4 1.3 13.6 1.3 46.4 0 102.9-30.5 136.4-73.8z"/>
-                </svg>
-              )},
-            ].map((social, i) => (
-              <button
-                key={i}
-                onMouseEnter={() => setHoveredBtn(`social${i}`)}
-                onMouseLeave={() => setHoveredBtn(null)}
-                style={{
-                  flex:1, padding:'12px',
-                  background: hoveredBtn === `social${i}` ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
-                  border: hoveredBtn === `social${i}` ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.08)',
-                  borderRadius:'12px',
-                  cursor:'pointer',
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                  transition:'all 0.2s ease',
-                  transform: hoveredBtn === `social${i}` ? 'translateY(-1px)' : 'translateY(0)',
-                }}
-              >
-                {social.icon}
-              </button>
-            ))}
+              )}
+            </button>
+
+            <button
+              onMouseEnter={() => setHoveredBtn('social2')}
+              onMouseLeave={() => setHoveredBtn(null)}
+              style={{
+                flex:1, padding:'12px',
+                background: hoveredBtn === 'social2' ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
+                border: hoveredBtn === 'social2' ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.08)',
+                borderRadius:'12px',
+                cursor:'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                transition:'all 0.2s ease',
+                transform: hoveredBtn === 'social2' ? 'translateY(-1px)' : 'translateY(0)',
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 814 1000">
+                <path fill="white" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.5-155.5-127.4C46.7 790.7 0 663 0 541.8c0-207.5 135.4-317.3 269-317.3 71 0 130.5 46.4 174.9 46.4 42.7 0 109.2-49.1 189.2-49.1 30.4 0 110.4 2.6 173.4 66.5zm-194.3-99.5c31.7-37.5 54.3-89.7 54.3-141.9 0-7.1-.6-14.3-1.9-20.1-51.6 1.9-112.3 34.4-149.2 75.8-28.5 32.4-55.1 84.7-55.1 139.5 0 8.3 1.3 16.6 1.9 19.2 3.2.6 8.4 1.3 13.6 1.3 46.4 0 102.9-30.5 136.4-73.8z"/>
+              </svg>
+            </button>
           </div>
         </div>
 
-        {/* Stats bar */}
         <div style={{
           display:'flex', gap:'24px', marginTop:'36px',
           opacity: mounted ? 1 : 0,
@@ -364,7 +432,6 @@ function WelcomePage({ onAuthComplete }) {
           ))}
         </div>
 
-        {/* Terms + Language */}
         <div style={{
           marginTop:'24px', textAlign:'center',
           opacity: mounted ? 1 : 0,

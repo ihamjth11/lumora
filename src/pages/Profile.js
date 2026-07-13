@@ -17,6 +17,7 @@ function Profile() {
   const username = userProfile?.username || 'user';
   const interests = userProfile?.interests || [];
   const avatarLetter = displayName.charAt(0).toUpperCase();
+  const userAvatar = userProfile?.avatar || '🧑‍💻';
 
   return (
     <div style={{
@@ -80,7 +81,7 @@ function Profile() {
             flexShrink: 0,
             boxShadow: '0 4px 16px rgba(108,99,255,0.35)',
           }}>
-            {avatarLetter}
+            {userAvatar}
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

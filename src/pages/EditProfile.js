@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { checkUsernameAvailable, updateUserProfile } from '../services/apiService';
 import { IoArrowBack, IoCamera } from 'react-icons/io5';
 import { MdVerified } from 'react-icons/md';
 
@@ -12,22 +14,95 @@ const avatarOptions = [
 function EditProfile() {
   const { colors } = useTheme();
   const navigate = useNavigate();
+  const { userProfile, refreshProfile } = useAuth();
 
   const [avatar, setAvatar] = useState('🧑‍💻');
-  const [name, setName] = useState('Hamjath');
-  const [username, setUsername] = useState('hamjath');
-  const [bio, setBio] = useState('Learning every day ✦');
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [originalUsername, setOriginalUsername] = useState('');
+  const [bio, setBio] = useState('');
   const [website, setWebsite] = useState('');
-  const [location, setLocation] = useState('Sri Lanka 🇱🇰');
+  const [location, setLocation] = useState('');
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState('');
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      navigate('/profile');
-    }, 1500);
+  // Load real profile data when component mounts
+  useEffect(() => {
+    if (userProfile) {
+      setAvatar(userProfile.avatar || '🧑‍💻');
+      setName(userProfile.name || '');
+      setUsername(userProfile.username || '');
+      setOriginalUsername(userProfile.username || '');
+      setBio(userProfile.bio || '');
+      setWebsite(userProfile.website || '');
+      setLocation(userProfile.location || '');
+    }
+  }, [userProfile]);
+
+  // Real-time username availability check
+  useEffect(() => {
+    if (username.length < 3) {
+      setUsernameStatus('');
+      return;
+    }
+    if (username.toLowerCase() === originalUsername.toLowerCase()) {
+      setUsernameStatus('same');
+      return;
+    }
+    setUsernameStatus('checking');
+    const timer = setTimeout(async () => {
+      const res = await checkUsernameAvailable(username);
+      if (res.success) {
+        setUsernameStatus(res.available ? 'available' : 'taken');
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [username, originalUsername]);
+
+  const handleSave = async () => {
+    setError('');
+
+    if (!name.trim()) {
+      setError('Name cannot be empty');
+      return;
+    }
+    if (!username.trim() || username.length < 3) {
+      setError('Username must be at least 3 characters');
+      return;
+    }
+    if (usernameStatus === 'taken') {
+      setError('This username is already taken');
+      return;
+    }
+    if (usernameStatus === 'checking') {
+      setError('Please wait, checking username...');
+      return;
+    }
+
+    setSaving(true);
+    const res = await updateUserProfile({
+      name,
+      username,
+      bio,
+      website,
+      location,
+      avatar,
+    });
+    setSaving(false);
+
+    if (res.success) {
+      await refreshProfile();
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        navigate('/profile');
+      }, 1200);
+    } else {
+      setError(res.error || 'Failed to save profile');
+    }
   };
 
   return (
@@ -63,17 +138,17 @@ function EditProfile() {
         }}>
           Edit Profile
         </span>
-        <button onClick={handleSave} style={{
+        <button onClick={handleSave} disabled={saving} style={{
           background: saved
             ? 'linear-gradient(135deg, #10b981, #059669)'
             : 'linear-gradient(135deg, #6C63FF, #F72585)',
           border: 'none', borderRadius: '10px',
           padding: '8px 16px',
           color: '#fff', fontSize: '13px', fontWeight: '700',
-          cursor: 'pointer', fontFamily: 'Inter',
-          transition: 'all 0.2s',
+          cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'Inter',
+          transition: 'all 0.2s', opacity: saving ? 0.7 : 1,
         }}>
-          {saved ? '✓ Saved!' : 'Save'}
+          {saving ? 'Saving...' : saved ? '✓ Saved!' : 'Save'}
         </button>
       </div>
 
@@ -170,41 +245,67 @@ function EditProfile() {
           borderRadius: '20px', overflow: 'hidden',
           boxShadow: colors.shadow,
         }}>
-          {[
-            { label: 'Name', value: name, onChange: setName, placeholder: 'Your full name' },
-            { label: 'Username', value: username, onChange: setUsername, placeholder: 'username', prefix: '@' },
-          ].map((field, i) => (
-            <div key={i} style={{
-              padding: '14px 16px',
-              borderBottom: i === 0 ? `1px solid ${colors.border}` : 'none',
+          <div style={{ padding: '14px 16px', borderBottom: `1px solid ${colors.border}` }}>
+            <p style={{
+              fontSize: '11px', fontWeight: '700',
+              color: '#6C63FF', marginBottom: '4px',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
             }}>
-              <p style={{
-                fontSize: '11px', fontWeight: '700',
-                color: '#6C63FF', marginBottom: '4px',
-                textTransform: 'uppercase', letterSpacing: '0.5px',
-              }}>
-                {field.label}
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {field.prefix && (
-                  <span style={{ color: colors.textMuted, fontSize: '14px' }}>
-                    {field.prefix}
-                  </span>
-                )}
-                <input
-                  type="text"
-                  value={field.value}
-                  onChange={(e) => field.onChange(e.target.value)}
-                  placeholder={field.placeholder}
-                  style={{
-                    flex: 1, background: 'none', border: 'none',
-                    outline: 'none', color: colors.textPrimary,
-                    fontSize: '15px', fontFamily: 'Inter', fontWeight: '500',
-                  }}
-                />
-              </div>
+              Name
+            </p>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your full name"
+              style={{
+                width: '100%', background: 'none', border: 'none',
+                outline: 'none', color: colors.textPrimary,
+                fontSize: '15px', fontFamily: 'Inter', fontWeight: '500',
+              }}
+            />
+          </div>
+          <div style={{ padding: '14px 16px' }}>
+            <p style={{
+              fontSize: '11px', fontWeight: '700',
+              color: '#6C63FF', marginBottom: '4px',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
+            }}>
+              Username
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: colors.textMuted, fontSize: '14px' }}>@</span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+                placeholder="username"
+                style={{
+                  flex: 1, background: 'none', border: 'none',
+                  outline: 'none', color: colors.textPrimary,
+                  fontSize: '15px', fontFamily: 'Inter', fontWeight: '500',
+                }}
+              />
             </div>
-          ))}
+            {username.length > 2 && usernameStatus !== 'same' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                <div style={{
+                  width: '7px', height: '7px', borderRadius: '50%',
+                  background: usernameStatus === 'available' ? '#10b981'
+                    : usernameStatus === 'taken' ? '#ef4444' : '#9ca3af',
+                }} />
+                <span style={{
+                  fontSize: '11px', fontWeight: '600',
+                  color: usernameStatus === 'available' ? '#10b981'
+                    : usernameStatus === 'taken' ? '#ef4444' : colors.textMuted,
+                }}>
+                  {usernameStatus === 'checking' && 'Checking...'}
+                  {usernameStatus === 'available' && 'Username available'}
+                  {usernameStatus === 'taken' && 'Username already taken'}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Bio */}
@@ -248,35 +349,58 @@ function EditProfile() {
           borderRadius: '20px', overflow: 'hidden',
           boxShadow: colors.shadow,
         }}>
-          {[
-            { label: 'Website', value: website, onChange: setWebsite, placeholder: 'https://yoursite.com' },
-            { label: 'Location', value: location, onChange: setLocation, placeholder: 'Where are you from?' },
-          ].map((field, i) => (
-            <div key={i} style={{
-              padding: '14px 16px',
-              borderBottom: i === 0 ? `1px solid ${colors.border}` : 'none',
+          <div style={{ padding: '14px 16px', borderBottom: `1px solid ${colors.border}` }}>
+            <p style={{
+              fontSize: '11px', fontWeight: '700',
+              color: '#6C63FF', marginBottom: '4px',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
             }}>
-              <p style={{
-                fontSize: '11px', fontWeight: '700',
-                color: '#6C63FF', marginBottom: '4px',
-                textTransform: 'uppercase', letterSpacing: '0.5px',
-              }}>
-                {field.label}
-              </p>
-              <input
-                type="text"
-                value={field.value}
-                onChange={(e) => field.onChange(e.target.value)}
-                placeholder={field.placeholder}
-                style={{
-                  width: '100%', background: 'none', border: 'none',
-                  outline: 'none', color: colors.textPrimary,
-                  fontSize: '15px', fontFamily: 'Inter', fontWeight: '500',
-                }}
-              />
-            </div>
-          ))}
+              Website
+            </p>
+            <input
+              type="text"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="https://yoursite.com"
+              style={{
+                width: '100%', background: 'none', border: 'none',
+                outline: 'none', color: colors.textPrimary,
+                fontSize: '15px', fontFamily: 'Inter', fontWeight: '500',
+              }}
+            />
+          </div>
+          <div style={{ padding: '14px 16px' }}>
+            <p style={{
+              fontSize: '11px', fontWeight: '700',
+              color: '#6C63FF', marginBottom: '4px',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
+            }}>
+              Location
+            </p>
+            <input
+              type="text"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Where are you from?"
+              style={{
+                width: '100%', background: 'none', border: 'none',
+                outline: 'none', color: colors.textPrimary,
+                fontSize: '15px', fontFamily: 'Inter', fontWeight: '500',
+              }}
+            />
+          </div>
         </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.2)',
+            borderRadius: '14px', padding: '10px 14px',
+          }}>
+            <p style={{ fontSize: '13px', color: '#ef4444', fontWeight: '500' }}>{error}</p>
+          </div>
+        )}
 
         {/* Preview Card */}
         <div style={{

@@ -2,17 +2,18 @@ import { auth } from "../firebase/firebaseConfig";
 
 const API_BASE_URL = "https://lumora-x963.onrender.com/api";
 
-// ---------- Get Firebase ID Token ----------
 const getAuthToken = async () => {
   const user = auth.currentUser;
   if (!user) return null;
   return await user.getIdToken();
 };
 
-// ---------- CHECK USERNAME AVAILABILITY (Public) ----------
 export const checkUsernameAvailable = async (username) => {
   try {
-    const res = await fetch(`${API_BASE_URL}/users/check-username/${username}`);
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/users/check-username/${username}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     const data = await res.json();
     return { success: true, available: data.available };
   } catch (error) {
@@ -20,7 +21,6 @@ export const checkUsernameAvailable = async (username) => {
   }
 };
 
-// ---------- CREATE USER PROFILE (Protected) ----------
 export const createUserProfile = async (profileData) => {
   try {
     const token = await getAuthToken();
@@ -40,7 +40,6 @@ export const createUserProfile = async (profileData) => {
   }
 };
 
-// ---------- GET MY PROFILE (Protected) ----------
 export const getUserProfile = async () => {
   try {
     const token = await getAuthToken();
@@ -57,7 +56,6 @@ export const getUserProfile = async () => {
   }
 };
 
-// ---------- UPDATE MY PROFILE (Protected) ----------
 export const updateUserProfile = async (updates) => {
   try {
     const token = await getAuthToken();

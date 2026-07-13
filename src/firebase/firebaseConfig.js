@@ -3,12 +3,12 @@ import { getAuth, GoogleAuthProvider, FacebookAuthProvider } from "firebase/auth
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "உன்னோட apiKey",
+  apiKey: "AIzaSyDjOJqPw66lGbdgTPC5DJxsIUoC_IXfJ88",
   authDomain: "lumora-50ce4.firebaseapp.com",
   projectId: "lumora-50ce4",
-  storageBucket: "lumora-50ce4.appspot.com",
-  messagingSenderId: "உன்னோட messagingSenderId",
-  appId: "உன்னோட appId"
+  storageBucket: "lumora-50ce4.firebasestorage.app",
+  messagingSenderId: "458199879473",
+  appId: "1:458199879473:web:e9dc7dba724186541daa10"
 };
 
 const app = initializeApp(firebaseConfig);

@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { checkUsernameAvailable, updateUserProfile, uploadProfilePhoto } from '../services/apiService';
-import { IoArrowBack, IoCamera } from 'react-icons/io5';
+import { getCroppedImg } from '../utils/cropImage';
+import Cropper from 'react-easy-crop';
+import { IoArrowBack, IoCamera, IoClose, IoCheckmark } from 'react-icons/io5';
 import { MdVerified } from 'react-icons/md';
 
 const avatarOptions = [
@@ -31,6 +33,13 @@ function EditProfile() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [error, setError] = useState('');
   const [usernameStatus, setUsernameStatus] = useState('');
+
+  // Crop modal state
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [rawImage, setRawImage] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
   useEffect(() => {
     if (userProfile) {
@@ -64,7 +73,7 @@ function EditProfile() {
     return () => clearTimeout(timer);
   }, [username, originalUsername]);
 
-  const handlePhotoSelect = async (e) => {
+  const handlePhotoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -78,14 +87,42 @@ function EditProfile() {
     }
 
     setError('');
-    setUploadingPhoto(true);
-    const res = await uploadProfilePhoto(file);
-    setUploadingPhoto(false);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawImage(reader.result);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setShowCropModal(true);
+    };
+    reader.readAsDataURL(file);
 
-    if (res.success) {
-      setPhotoURL(res.url);
-    } else {
-      setError(res.error || 'Failed to upload photo');
+    // Reset input so selecting the same file again re-triggers onChange
+    e.target.value = '';
+  };
+
+  const onCropComplete = useCallback((_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels);
+  }, []);
+
+  const handleCropConfirm = async () => {
+    try {
+      const croppedBlob = await getCroppedImg(rawImage, croppedAreaPixels);
+      setShowCropModal(false);
+      setRawImage(null);
+
+      setUploadingPhoto(true);
+      const file = new File([croppedBlob], 'profile.jpg', { type: 'image/jpeg' });
+      const res = await uploadProfilePhoto(file);
+      setUploadingPhoto(false);
+
+      if (res.success) {
+        setPhotoURL(res.url);
+      } else {
+        setError(res.error || 'Failed to upload photo');
+      }
+    } catch (err) {
+      setUploadingPhoto(false);
+      setError('Failed to crop image');
     }
   };
 
@@ -500,6 +537,75 @@ function EditProfile() {
       </div>
 
       <div style={{ height: '24px' }} />
+
+      {/* CROP MODAL */}
+      {showCropModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: '#000',
+          zIndex: 9999, display: 'flex', flexDirection: 'column',
+        }}>
+          {/* Header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 20px', background: '#000',
+          }}>
+            <button
+              onClick={() => { setShowCropModal(false); setRawImage(null); }}
+              style={{
+                background: 'rgba(255,255,255,0.1)', border: 'none',
+                width: '36px', height: '36px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', cursor: 'pointer', fontSize: '18px',
+              }}>
+              <IoClose />
+            </button>
+            <span style={{ color: '#fff', fontSize: '15px', fontWeight: '700' }}>
+              Adjust Photo
+            </span>
+            <button
+              onClick={handleCropConfirm}
+              style={{
+                background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+                border: 'none', width: '36px', height: '36px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', cursor: 'pointer', fontSize: '18px',
+              }}>
+              <IoCheckmark />
+            </button>
+          </div>
+
+          {/* Cropper Area */}
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Cropper
+              image={rawImage}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+            />
+          </div>
+
+          {/* Zoom Slider */}
+          <div style={{ padding: '20px 30px 32px', background: '#000' }}>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.1}
+              value={zoom}
+              onChange={(e) => setZoom(Number(e.target.value))}
+              style={{ width: '100%', accentColor: '#6C63FF' }}
+            />
+            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginTop: '8px' }}>
+              Pinch or drag to zoom · Drag to reposition
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

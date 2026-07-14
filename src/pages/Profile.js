@@ -16,7 +16,6 @@ function Profile() {
   const displayName = userProfile?.name || 'User';
   const username = userProfile?.username || 'user';
   const interests = userProfile?.interests || [];
-  const avatarLetter = displayName.charAt(0).toUpperCase();
   const userAvatar = userProfile?.avatar || '🧑‍💻';
   const photoURL = userProfile?.photoURL || '';
 
@@ -72,17 +71,18 @@ function Profile() {
         borderRadius: '24px', border: `1px solid ${colors.border}`,
         padding: '24px 20px', boxShadow: colors.shadow,
       }}>
-        <div style={{
-        width: '80px', height: '80px', borderRadius: '50%',
-        background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
-         backgroundSize: 'cover', backgroundPosition: 'center',
-         display: 'flex', alignItems: 'center',
-        justifyContent: 'center', fontSize: '32px',
-        flexShrink: 0,
-        boxShadow: '0 4px 16px rgba(108,99,255,0.35)',
-        }}>
-     {!photoURL && userAvatar}
-</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+          <div style={{
+            width: '80px', height: '80px', borderRadius: '50%',
+            background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+            backgroundSize: 'cover', backgroundPosition: 'center',
+            display: 'flex', alignItems: 'center',
+            justifyContent: 'center', fontSize: '32px',
+            flexShrink: 0,
+            boxShadow: '0 4px 16px rgba(108,99,255,0.35)',
+          }}>
+            {!photoURL && userAvatar}
+          </div>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <h2 style={{ fontSize: '20px', fontWeight: '800', color: colors.textPrimary }}>
@@ -120,6 +120,7 @@ function Profile() {
           ))}
         </div>
 
+        {/* Edit Profile Button */}
         <button
           onClick={() => navigate('/edit-profile')}
           style={{
@@ -139,7 +140,7 @@ function Profile() {
         </button>
       </div>
 
-      {/* Interests — real data from Firestore */}
+      {/* Interests */}
       {interests.length > 0 && (
         <div style={{ padding: '0 16px 16px' }}>
           <h3 style={{ fontSize: '14px', fontWeight: '700', color: colors.textPrimary, marginBottom: '10px' }}>

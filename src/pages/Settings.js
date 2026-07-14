@@ -6,6 +6,7 @@ import { FiSun, FiMoon, FiLock, FiBell, FiEye, FiUser, FiLogOut } from 'react-ic
 import { MdVerified, MdOutlinePrivacyTip } from 'react-icons/md';
 import { BsShieldLock, BsPhone, BsKey } from 'react-icons/bs';
 import { AiOutlineInfoCircle } from 'react-icons/ai';
+import { logoutUser } from '../firebase/authService';
 
 function Toggle({ value, onChange, color = '#6C63FF' }) {
   return (
@@ -94,9 +95,9 @@ function Settings() {
   const [step2FA, setStep2FA] = useState(1);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.reload();
+  const handleLogout = async () => {
+  await logoutUser();
+  setShowLogoutConfirm(false);
   };
 
   return (

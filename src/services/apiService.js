@@ -74,3 +74,24 @@ export const updateUserProfile = async (updates) => {
     return { success: false, error: error.message };
   }
 };
+// ---------- UPLOAD PROFILE PHOTO (Protected) ----------
+export const uploadProfilePhoto = async (file) => {
+  try {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    const res = await fetch(`${API_BASE_URL}/upload/profile-photo`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, url: data.url };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

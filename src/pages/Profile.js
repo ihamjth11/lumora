@@ -18,6 +18,7 @@ function Profile() {
   const interests = userProfile?.interests || [];
   const avatarLetter = displayName.charAt(0).toUpperCase();
   const userAvatar = userProfile?.avatar || '🧑‍💻';
+  const photoURL = userProfile?.photoURL || '';
 
   return (
     <div style={{
@@ -71,18 +72,17 @@ function Profile() {
         borderRadius: '24px', border: `1px solid ${colors.border}`,
         padding: '24px 20px', boxShadow: colors.shadow,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-          <div style={{
-            width: '80px', height: '80px', borderRadius: '50%',
-            background: 'linear-gradient(135deg, #6C63FF, #F72585)',
-            display: 'flex', alignItems: 'center',
-            justifyContent: 'center', fontSize: '32px',
-            fontWeight: '800', color: '#fff',
-            flexShrink: 0,
-            boxShadow: '0 4px 16px rgba(108,99,255,0.35)',
-          }}>
-            {userAvatar}
-          </div>
+        <div style={{
+        width: '80px', height: '80px', borderRadius: '50%',
+        background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+         backgroundSize: 'cover', backgroundPosition: 'center',
+         display: 'flex', alignItems: 'center',
+        justifyContent: 'center', fontSize: '32px',
+        flexShrink: 0,
+        boxShadow: '0 4px 16px rgba(108,99,255,0.35)',
+        }}>
+     {!photoURL && userAvatar}
+</div>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <h2 style={{ fontSize: '20px', fontWeight: '800', color: colors.textPrimary }}>

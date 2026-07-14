@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { checkUsernameAvailable, updateUserProfile } from '../services/apiService';
+import { checkUsernameAvailable, updateUserProfile, uploadProfilePhoto } from '../services/apiService';
 import { IoArrowBack, IoCamera } from 'react-icons/io5';
 import { MdVerified } from 'react-icons/md';
 
@@ -15,8 +15,10 @@ function EditProfile() {
   const { colors } = useTheme();
   const navigate = useNavigate();
   const { userProfile, refreshProfile } = useAuth();
+  const fileInputRef = useRef(null);
 
   const [avatar, setAvatar] = useState('🧑‍💻');
+  const [photoURL, setPhotoURL] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [originalUsername, setOriginalUsername] = useState('');
@@ -26,13 +28,14 @@ function EditProfile() {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [error, setError] = useState('');
   const [usernameStatus, setUsernameStatus] = useState('');
 
-  // Load real profile data when component mounts
   useEffect(() => {
     if (userProfile) {
       setAvatar(userProfile.avatar || '🧑‍💻');
+      setPhotoURL(userProfile.photoURL || '');
       setName(userProfile.name || '');
       setUsername(userProfile.username || '');
       setOriginalUsername(userProfile.username || '');
@@ -42,7 +45,6 @@ function EditProfile() {
     }
   }, [userProfile]);
 
-  // Real-time username availability check
   useEffect(() => {
     if (username.length < 3) {
       setUsernameStatus('');
@@ -61,6 +63,31 @@ function EditProfile() {
     }, 500);
     return () => clearTimeout(timer);
   }, [username, originalUsername]);
+
+  const handlePhotoSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image must be under 10MB');
+      return;
+    }
+
+    setError('');
+    setUploadingPhoto(true);
+    const res = await uploadProfilePhoto(file);
+    setUploadingPhoto(false);
+
+    if (res.success) {
+      setPhotoURL(res.url);
+    } else {
+      setError(res.error || 'Failed to upload photo');
+    }
+  };
 
   const handleSave = async () => {
     setError('');
@@ -90,6 +117,7 @@ function EditProfile() {
       website,
       location,
       avatar,
+      photoURL,
     });
     setSaving(false);
 
@@ -113,7 +141,6 @@ function EditProfile() {
       fontFamily: 'Inter, sans-serif',
     }}>
 
-      {/* Header */}
       <div style={{
         position: 'sticky', top: 0,
         background: colors.navBg,
@@ -152,23 +179,45 @@ function EditProfile() {
         </button>
       </div>
 
-      {/* Avatar Section */}
+      {/* Avatar/Photo Section */}
       <div style={{
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', padding: '28px 16px 20px',
       }}>
+        <input
+          type="file"
+          accept="image/*"
+          ref={fileInputRef}
+          onChange={handlePhotoSelect}
+          style={{ display: 'none' }}
+        />
         <div style={{ position: 'relative', marginBottom: '8px' }}>
           <div style={{
             width: '90px', height: '90px', borderRadius: '50%',
-            background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+            background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+            backgroundSize: 'cover', backgroundPosition: 'center',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '40px',
             boxShadow: '0 4px 20px rgba(108,99,255,0.3)',
           }}>
-            {avatar}
+            {!photoURL && avatar}
+            {uploadingPhoto && (
+              <div style={{
+                position: 'absolute', inset: 0, borderRadius: '50%',
+                background: 'rgba(0,0,0,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <div style={{
+                  width: '24px', height: '24px', borderRadius: '50%',
+                  border: '3px solid rgba(255,255,255,0.3)',
+                  borderTop: '3px solid #fff',
+                  animation: 'spin 0.8s linear infinite',
+                }} />
+              </div>
+            )}
           </div>
           <button
-            onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+            onClick={() => fileInputRef.current?.click()}
             style={{
               position: 'absolute', bottom: 0, right: 0,
               width: '30px', height: '30px', borderRadius: '50%',
@@ -180,18 +229,30 @@ function EditProfile() {
             <IoCamera />
           </button>
         </div>
-        <button
-          onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-          style={{
-            background: 'none', border: 'none',
-            color: '#6C63FF', fontSize: '14px', fontWeight: '700',
-            cursor: 'pointer', fontFamily: 'Inter',
-          }}>
-          Change Avatar
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              background: 'none', border: 'none',
+              color: '#6C63FF', fontSize: '14px', fontWeight: '700',
+              cursor: 'pointer', fontFamily: 'Inter',
+            }}>
+            Upload Photo
+          </button>
+          <span style={{ color: colors.textMuted }}>|</span>
+          <button
+            onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+            style={{
+              background: 'none', border: 'none',
+              color: '#6C63FF', fontSize: '14px', fontWeight: '700',
+              cursor: 'pointer', fontFamily: 'Inter',
+            }}>
+            Use Avatar
+          </button>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
 
-      {/* Avatar Picker */}
       {showAvatarPicker && (
         <div style={{
           margin: '0 16px 20px',
@@ -213,13 +274,13 @@ function EditProfile() {
             {avatarOptions.map((av, i) => (
               <button
                 key={i}
-                onClick={() => { setAvatar(av); setShowAvatarPicker(false); }}
+                onClick={() => { setAvatar(av); setPhotoURL(''); setShowAvatarPicker(false); }}
                 style={{
                   width: '100%', aspectRatio: '1',
-                  background: avatar === av
+                  background: avatar === av && !photoURL
                     ? 'linear-gradient(135deg, #6C63FF22, #F7258522)'
                     : colors.inputBg,
-                  border: avatar === av
+                  border: avatar === av && !photoURL
                     ? '2px solid #6C63FF'
                     : `1px solid ${colors.border}`,
                   borderRadius: '12px', fontSize: '24px',
@@ -235,10 +296,8 @@ function EditProfile() {
         </div>
       )}
 
-      {/* Form Fields */}
       <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-        {/* Section: Basic Info */}
         <div style={{
           background: colors.bgCard,
           border: `1px solid ${colors.border}`,
@@ -308,7 +367,6 @@ function EditProfile() {
           </div>
         </div>
 
-        {/* Bio */}
         <div style={{
           background: colors.bgCard,
           border: `1px solid ${colors.border}`,
@@ -342,7 +400,6 @@ function EditProfile() {
           </p>
         </div>
 
-        {/* Website + Location */}
         <div style={{
           background: colors.bgCard,
           border: `1px solid ${colors.border}`,
@@ -391,7 +448,6 @@ function EditProfile() {
           </div>
         </div>
 
-        {/* Error */}
         {error && (
           <div style={{
             background: 'rgba(239,68,68,0.08)',
@@ -402,7 +458,6 @@ function EditProfile() {
           </div>
         )}
 
-        {/* Preview Card */}
         <div style={{
           background: `linear-gradient(135deg, #6C63FF15, #F7258510)`,
           border: '1px solid #6C63FF25',
@@ -418,11 +473,12 @@ function EditProfile() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
               width: '48px', height: '48px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+              background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+              backgroundSize: 'cover', backgroundPosition: 'center',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '22px',
             }}>
-              {avatar}
+              {!photoURL && avatar}
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>

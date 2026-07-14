@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { RiSettings4Line } from 'react-icons/ri';
 import { MdVerified } from 'react-icons/md';
-import { FiSun, FiMoon, FiHeart, FiGrid, FiBookmark, FiPlus, FiEdit2 } from 'react-icons/fi';
+import { FiSun, FiMoon, FiHeart, FiGrid, FiBookmark, FiPlus, FiEdit2, FiLink, FiMapPin } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 
 function Profile() {
@@ -18,6 +18,13 @@ function Profile() {
   const interests = userProfile?.interests || [];
   const userAvatar = userProfile?.avatar || '🧑‍💻';
   const photoURL = userProfile?.photoURL || '';
+  const bio = userProfile?.bio || '';
+  const website = userProfile?.website || '';
+  const location = userProfile?.location || '';
+
+  // Format website for display (remove https://, trailing slash) and ensure href has protocol
+  const websiteDisplay = website.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const websiteHref = website.startsWith('http') ? website : `https://${website}`;
 
   return (
     <div style={{
@@ -83,17 +90,54 @@ function Profile() {
           }}>
             {!photoURL && userAvatar}
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <h2 style={{ fontSize: '20px', fontWeight: '800', color: colors.textPrimary }}>
                 {displayName}
               </h2>
-              <MdVerified style={{ color: '#6C63FF', fontSize: '18px' }} />
+              <MdVerified style={{ color: '#6C63FF', fontSize: '18px', flexShrink: 0 }} />
             </div>
             <p style={{ fontSize: '13px', color: colors.textMuted, marginTop: '2px' }}>@{username}</p>
-            <p style={{ fontSize: '13px', color: colors.textSecondary, marginTop: '4px' }}>
-              Learning every day ✦
-            </p>
+
+            {/* Real Bio */}
+            {bio && (
+              <p style={{
+                fontSize: '13px', color: colors.textSecondary,
+                marginTop: '6px', lineHeight: '1.5',
+                whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              }}>
+                {bio}
+              </p>
+            )}
+
+            {/* Location */}
+            {location && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
+                <FiMapPin style={{ fontSize: '12px', color: colors.textMuted, flexShrink: 0 }} />
+                <span style={{ fontSize: '12px', color: colors.textMuted }}>{location}</span>
+              </div>
+            )}
+
+            {/* Website Link */}
+            {website && (
+              
+                href={websiteHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  marginTop: '6px', textDecoration: 'none',
+                }}
+              >
+                <FiLink style={{ fontSize: '12px', color: '#6C63FF', flexShrink: 0 }} />
+                <span style={{
+                  fontSize: '12px', color: '#6C63FF', fontWeight: '600',
+                  wordBreak: 'break-all',
+                }}>
+                  {websiteDisplay}
+                </span>
+              </a>
+            )}
           </div>
         </div>
 

@@ -1,9 +1,14 @@
 import React from 'react';
 import { useTheme } from '../ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { AiOutlinePlus } from 'react-icons/ai';
 
 function Stories() {
   const { colors } = useTheme();
+  const { userProfile } = useAuth();
+
+  const userAvatar = userProfile?.avatar || '🧑‍💻';
+  const photoURL = userProfile?.photoURL || '';
 
   return (
     <div style={{
@@ -23,13 +28,14 @@ function Stories() {
         <div style={{
           width: '64px', height: '64px',
           borderRadius: '50%',
-          background: colors.storyBg,
+          background: photoURL ? `url(${photoURL})` : colors.storyBg,
+          backgroundSize: 'cover', backgroundPosition: 'center',
           border: `2px dashed #6C63FF`,
           display: 'flex', alignItems: 'center',
           justifyContent: 'center', fontSize: '26px',
           position: 'relative',
         }}>
-          🧑‍💻
+          {!photoURL && userAvatar}
           <div style={{
             position: 'absolute', bottom: '0px', right: '0px',
             width: '20px', height: '20px',

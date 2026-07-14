@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Stories from '../components/Stories';
 import LumoraLogo from '../components/LumoraLogo';
 import Notifications from '../components/Notifications';
@@ -10,8 +11,12 @@ import { FiSend, FiBell } from 'react-icons/fi';
 function Home() {
   const { colors } = useTheme();
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const unreadCount = 3;
+
+  const userAvatar = userProfile?.avatar || '🧑‍💻';
+  const photoURL = userProfile?.photoURL || '';
 
   return (
     <div style={{
@@ -117,11 +122,13 @@ function Home() {
         >
           <div style={{
             width: '38px', height: '38px', borderRadius: '50%',
-            background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+            background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+            backgroundSize: 'cover', backgroundPosition: 'center',
             display: 'flex', alignItems: 'center',
             justifyContent: 'center', fontSize: '18px',
+            flexShrink: 0,
           }}>
-            🧑‍💻
+            {!photoURL && userAvatar}
           </div>
           <span style={{ color: colors.textMuted, fontSize: '14px', flex: 1, textAlign: 'left' }}>
             Share something you learned...

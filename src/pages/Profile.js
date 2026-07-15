@@ -22,9 +22,8 @@ function Profile() {
   const website = userProfile?.website || '';
   const location = userProfile?.location || '';
 
-  // Format website for display (remove https://, trailing slash) and ensure href has protocol
   const websiteDisplay = website.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  const websiteHref = website.startsWith('http') ? website : `https://${website}`;
+  const websiteHref = website.startsWith('http') ? website : 'https://' + website;
 
   return (
     <div style={{
@@ -33,12 +32,11 @@ function Profile() {
       background: colors.bgPrimary,
     }}>
 
-      {/* Header */}
       <div style={{
         position: 'sticky', top: 0,
         background: colors.navBg,
         backdropFilter: 'blur(12px)',
-        borderBottom: `1px solid ${colors.border}`,
+        borderBottom: '1px solid ' + colors.border,
         padding: '14px 20px',
         display: 'flex', justifyContent: 'space-between',
         alignItems: 'center', zIndex: 100,
@@ -72,16 +70,15 @@ function Profile() {
         </div>
       </div>
 
-      {/* Profile Card */}
       <div style={{
         background: colors.bgCard, margin: '16px',
-        borderRadius: '24px', border: `1px solid ${colors.border}`,
+        borderRadius: '24px', border: '1px solid ' + colors.border,
         padding: '24px 20px', boxShadow: colors.shadow,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
           <div style={{
             width: '80px', height: '80px', borderRadius: '50%',
-            background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+            background: photoURL ? 'url(' + photoURL + ')' : 'linear-gradient(135deg, #6C63FF, #F72585)',
             backgroundSize: 'cover', backgroundPosition: 'center',
             display: 'flex', alignItems: 'center',
             justifyContent: 'center', fontSize: '32px',
@@ -97,10 +94,9 @@ function Profile() {
               </h2>
               <MdVerified style={{ color: '#6C63FF', fontSize: '18px', flexShrink: 0 }} />
             </div>
-            <p style={{ fontSize: '13px', color: colors.textMuted, marginTop: '2px' }}>@{username}</p>
+            <p style={{ fontSize: '13px', color: colors.textMuted, marginTop: '2px' }}>{'@' + username}</p>
 
-            {/* Real Bio */}
-            {bio && (
+            {bio ? (
               <p style={{
                 fontSize: '13px', color: colors.textSecondary,
                 marginTop: '6px', lineHeight: '1.5',
@@ -108,18 +104,16 @@ function Profile() {
               }}>
                 {bio}
               </p>
-            )}
+            ) : null}
 
-            {/* Location */}
-            {location && (
+            {location ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
                 <FiMapPin style={{ fontSize: '12px', color: colors.textMuted, flexShrink: 0 }} />
                 <span style={{ fontSize: '12px', color: colors.textMuted }}>{location}</span>
               </div>
-            )}
+            ) : null}
 
-            {/* Website Link */}
-            {website && (
+            {website ? (<a
               
                 href={websiteHref}
                 target="_blank"
@@ -137,11 +131,10 @@ function Profile() {
                   {websiteDisplay}
                 </span>
               </a>
-            )}
+            ) : null}
           </div>
         </div>
 
-        {/* Stats */}
         <div style={{
           display: 'flex', justifyContent: 'space-around',
           background: isDark ? '#1a1a2e' : '#f0efff',
@@ -164,13 +157,12 @@ function Profile() {
           ))}
         </div>
 
-        {/* Edit Profile Button */}
         <button
           onClick={() => navigate('/edit-profile')}
           style={{
             width: '100%', padding: '10px',
             background: 'none',
-            border: `1px solid ${colors.border}`,
+            border: '1px solid ' + colors.border,
             borderRadius: '12px',
             color: colors.textPrimary,
             fontSize: '14px', fontWeight: '700',
@@ -184,8 +176,7 @@ function Profile() {
         </button>
       </div>
 
-      {/* Interests */}
-      {interests.length > 0 && (
+      {interests.length > 0 ? (
         <div style={{ padding: '0 16px 16px' }}>
           <h3 style={{ fontSize: '14px', fontWeight: '700', color: colors.textPrimary, marginBottom: '10px' }}>
             My Interests
@@ -206,12 +197,11 @@ function Profile() {
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Tabs */}
       <div style={{
         display: 'flex',
-        borderBottom: `1px solid ${colors.border}`,
+        borderBottom: '1px solid ' + colors.border,
         margin: '0 16px', marginBottom: '16px',
       }}>
         {[
@@ -234,9 +224,8 @@ function Profile() {
         ))}
       </div>
 
-      {/* Tab Content */}
       <div style={{ padding: '0 16px' }}>
-        {activeTab === 'posts' && (
+        {activeTab === 'posts' ? (
           <div style={{
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', padding: '40px 24px',
@@ -261,9 +250,9 @@ function Profile() {
               Share your first learning post! ✨
             </p>
           </div>
-        )}
+        ) : null}
 
-        {activeTab === 'saved' && (
+        {activeTab === 'saved' ? (
           <div style={{
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', padding: '40px 24px', textAlign: 'center',
@@ -276,9 +265,9 @@ function Profile() {
               Bookmark reels to find them here ✨
             </p>
           </div>
-        )}
+        ) : null}
 
-        {activeTab === 'liked' && (
+        {activeTab === 'liked' ? (
           <div style={{
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', padding: '40px 24px', textAlign: 'center',
@@ -291,7 +280,7 @@ function Profile() {
               Like posts to see them here ✨
             </p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

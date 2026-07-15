@@ -95,3 +95,82 @@ export const uploadProfilePhoto = async (file) => {
     return { success: false, error: error.message };
   }
 };
+// ---------- UPLOAD POST MEDIA (Protected) ----------
+export const uploadPostMedia = async (file) => {
+  try {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append("media", file);
+
+    const res = await fetch(`${API_BASE_URL}/upload/post-media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, url: data.url, mediaType: data.mediaType };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- CREATE POST (Protected) ----------
+export const createPost = async (postData) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/posts/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(postData),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, post: data.post };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- GET FEED (Public) ----------
+export const getFeed = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/posts/feed`);
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, posts: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- GET POSTS BY USER (Public) ----------
+export const getUserPosts = async (firebaseUid) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/posts/user/${firebaseUid}`);
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, posts: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- LIKE / UNLIKE POST (Protected) ----------
+export const toggleLikePost = async (postId) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/posts/${postId}/like`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, likesCount: data.likesCount, liked: data.liked };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

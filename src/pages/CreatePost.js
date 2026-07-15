@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import { IoArrowBack } from 'react-icons/io5';
+import { useAuth } from '../context/AuthContext';
+import { uploadPostMedia, createPost } from '../services/apiService';
+import { IoArrowBack, IoClose } from 'react-icons/io5';
 import { AiOutlinePicture } from 'react-icons/ai';
 import { MdOutlineVideoLibrary } from 'react-icons/md';
 import { BsEmojiSmile } from 'react-icons/bs';
@@ -21,15 +23,103 @@ const categoryEmojis = {
 function CreatePost() {
   const { colors } = useTheme();
   const navigate = useNavigate();
+  const { userProfile } = useAuth();
+  const photoInputRef = useRef(null);
+  const videoInputRef = useRef(null);
+
   const [caption, setCaption] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [postType, setPostType] = useState('post');
   const [posted, setPosted] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handlePost = () => {
-    if (!caption.trim() || !selectedCategory) return;
-    setPosted(true);
-    setTimeout(() => navigate('/'), 2000);
+  // Media state
+  const [mediaFile, setMediaFile] = useState(null);
+  const [mediaPreview, setMediaPreview] = useState('');
+  const [mediaKind, setMediaKind] = useState(''); // 'image' | 'video'
+  const [uploadedUrl, setUploadedUrl] = useState('');
+  const [uploadedType, setUploadedType] = useState('');
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  const userAvatar = userProfile?.avatar || '🧑‍💻';
+  const photoURL = userProfile?.photoURL || '';
+
+  const handleMediaSelect = async (e, kind) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const maxSize = kind === 'video' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError(`File too large. Max ${kind === 'video' ? '50MB' : '10MB'} allowed.`);
+      return;
+    }
+
+    setError('');
+    setMediaFile(file);
+    setMediaKind(kind);
+    setMediaPreview(URL.createObjectURL(file));
+    e.target.value = '';
+
+    // Upload immediately to Cloudinary
+    setUploadingMedia(true);
+    const res = await uploadPostMedia(file);
+    setUploadingMedia(false);
+
+    if (res.success) {
+      setUploadedUrl(res.url);
+      setUploadedType(res.mediaType);
+    } else {
+      setError(res.error || 'Failed to upload media');
+      setMediaPreview('');
+      setMediaFile(null);
+    }
+  };
+
+  const handleRemoveMedia = () => {
+    setMediaFile(null);
+    setMediaPreview('');
+    setMediaKind('');
+    setUploadedUrl('');
+    setUploadedType('');
+  };
+
+  const handlePost = async () => {
+    setError('');
+
+    if (postType === 'story') {
+      setError('Stories are coming soon! Please post as a Post or Reel for now.');
+      return;
+    }
+    if (!uploadedUrl) {
+      setError('Please upload a photo or video');
+      return;
+    }
+    if (!selectedCategory) {
+      setError('Please select a category');
+      return;
+    }
+    if (uploadingMedia) {
+      setError('Please wait, media is still uploading...');
+      return;
+    }
+
+    setPosting(true);
+    const res = await createPost({
+      mediaUrl: uploadedUrl,
+      mediaType: uploadedType,
+      caption,
+      category: selectedCategory,
+      type: postType === 'reel' ? 'reel' : 'post',
+    });
+    setPosting(false);
+
+    if (res.success) {
+      setPosted(true);
+      setTimeout(() => navigate('/'), 1800);
+    } else {
+      setError(res.error || 'Failed to create post');
+    }
   };
 
   return (
@@ -71,19 +161,20 @@ function CreatePost() {
         </span>
         <button
           onClick={handlePost}
+          disabled={posting}
           style={{
-            background: caption.trim() && selectedCategory
+            background: uploadedUrl && selectedCategory
               ? 'linear-gradient(135deg, #7c3aed, #a855f7)'
               : colors.border,
             border: 'none', borderRadius: '10px',
             padding: '8px 16px',
-            color: caption.trim() && selectedCategory ? '#fff' : colors.textMuted,
+            color: uploadedUrl && selectedCategory ? '#fff' : colors.textMuted,
             fontSize: '14px', fontWeight: '700',
-            cursor: 'pointer', fontFamily: 'Inter',
-            transition: 'all 0.2s',
+            cursor: posting ? 'not-allowed' : 'pointer', fontFamily: 'Inter',
+            transition: 'all 0.2s', opacity: posting ? 0.7 : 1,
           }}
         >
-          Share
+          {posting ? 'Posting...' : 'Share'}
         </button>
       </div>
 
@@ -118,55 +209,147 @@ function CreatePost() {
         ))}
       </div>
 
-      {/* Media Upload */}
-      <div style={{ padding: '16px' }}>
-        <div style={{
-          height: '200px',
-          background: colors.bgCard,
-          border: `2px dashed ${colors.border}`,
-          borderRadius: '20px',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          gap: '12px', cursor: 'pointer',
-        }}>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <div style={{
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: '6px',
-            }}>
-              <div style={{
-                width: '52px', height: '52px',
-                borderRadius: '14px',
-                background: '#f3eeff',
-                display: 'flex', alignItems: 'center',
-                justifyContent: 'center', fontSize: '24px',
-                color: '#7c3aed',
-              }}>
-                <AiOutlinePicture />
-              </div>
-              <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600' }}>Photo</span>
-            </div>
-            <div style={{
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: '6px',
-            }}>
-              <div style={{
-                width: '52px', height: '52px',
-                borderRadius: '14px',
-                background: '#f3eeff',
-                display: 'flex', alignItems: 'center',
-                justifyContent: 'center', fontSize: '24px',
-                color: '#7c3aed',
-              }}>
-                <MdOutlineVideoLibrary />
-              </div>
-              <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600' }}>Video</span>
-            </div>
+      {postType === 'story' && (
+        <div style={{ padding: '0 16px', marginTop: '12px' }}>
+          <div style={{
+            background: '#f59e0b15', border: '1px solid #f59e0b30',
+            borderRadius: '12px', padding: '12px 14px',
+          }}>
+            <p style={{ fontSize: '13px', color: '#f59e0b', fontWeight: '600' }}>
+              ⏳ Stories are coming soon! For now, please post as a Post or Reel.
+            </p>
           </div>
-          <p style={{ fontSize: '13px', color: colors.textMuted }}>
-            Tap to upload photo or video
-          </p>
         </div>
+      )}
+
+      {/* Media Upload / Preview */}
+      <div style={{ padding: '16px' }}>
+        <input
+          type="file"
+          accept="image/*"
+          ref={photoInputRef}
+          onChange={(e) => handleMediaSelect(e, 'image')}
+          style={{ display: 'none' }}
+        />
+        <input
+          type="file"
+          accept="video/*"
+          ref={videoInputRef}
+          onChange={(e) => handleMediaSelect(e, 'video')}
+          style={{ display: 'none' }}
+        />
+
+        {!mediaPreview ? (
+          <div style={{
+            height: '200px',
+            background: colors.bgCard,
+            border: `2px dashed ${colors.border}`,
+            borderRadius: '20px',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: '12px',
+          }}>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div
+                onClick={() => photoInputRef.current?.click()}
+                style={{
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', gap: '6px', cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: '52px', height: '52px',
+                  borderRadius: '14px',
+                  background: '#f3eeff',
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: '24px',
+                  color: '#7c3aed',
+                }}>
+                  <AiOutlinePicture />
+                </div>
+                <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600' }}>Photo</span>
+              </div>
+              <div
+                onClick={() => videoInputRef.current?.click()}
+                style={{
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', gap: '6px', cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: '52px', height: '52px',
+                  borderRadius: '14px',
+                  background: '#f3eeff',
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: '24px',
+                  color: '#7c3aed',
+                }}>
+                  <MdOutlineVideoLibrary />
+                </div>
+                <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600' }}>Video</span>
+              </div>
+            </div>
+            <p style={{ fontSize: '13px', color: colors.textMuted }}>
+              Tap to upload photo or video
+            </p>
+          </div>
+        ) : (
+          <div style={{
+            position: 'relative', borderRadius: '20px',
+            overflow: 'hidden', background: '#000',
+          }}>
+            {mediaKind === 'image' ? (
+              <img src={mediaPreview} alt="preview" style={{
+                width: '100%', maxHeight: '360px', objectFit: 'contain', display: 'block',
+              }} />
+            ) : (
+              <video src={mediaPreview} controls style={{
+                width: '100%', maxHeight: '360px', display: 'block',
+              }} />
+            )}
+
+            {uploadingMedia && (
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'rgba(0,0,0,0.5)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexDirection: 'column', gap: '10px',
+              }}>
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '50%',
+                  border: '3px solid rgba(255,255,255,0.3)',
+                  borderTop: '3px solid #fff',
+                  animation: 'spin 0.8s linear infinite',
+                }} />
+                <span style={{ color: '#fff', fontSize: '13px', fontWeight: '600' }}>Uploading...</span>
+              </div>
+            )}
+
+            <button
+              onClick={handleRemoveMedia}
+              style={{
+                position: 'absolute', top: '10px', right: '10px',
+                width: '32px', height: '32px', borderRadius: '50%',
+                background: 'rgba(0,0,0,0.6)', border: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: '18px', cursor: 'pointer',
+              }}
+            >
+              <IoClose />
+            </button>
+
+            {uploadedUrl && !uploadingMedia && (
+              <div style={{
+                position: 'absolute', top: '10px', left: '10px',
+                background: 'rgba(16,185,129,0.9)', borderRadius: '20px',
+                padding: '4px 10px',
+              }}>
+                <span style={{ color: '#fff', fontSize: '11px', fontWeight: '700' }}>✓ Uploaded</span>
+              </div>
+            )}
+          </div>
+        )}
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
 
       {/* Caption */}
@@ -184,17 +367,18 @@ function CreatePost() {
             <div style={{
               width: '38px', height: '38px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+              background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #7c3aed, #a855f7)',
+              backgroundSize: 'cover', backgroundPosition: 'center',
               display: 'flex', alignItems: 'center',
               justifyContent: 'center', fontSize: '18px',
               flexShrink: 0,
             }}>
-              🧑‍💻
+              {!photoURL && userAvatar}
             </div>
             <textarea
               placeholder="Share what you learned today..."
               value={caption}
-              onChange={(e) => setCaption(e.target.value)}
+              onChange={(e) => setCaption(e.target.value.slice(0, 300))}
               rows={4}
               style={{
                 flex: 1, background: 'none',
@@ -260,6 +444,19 @@ function CreatePost() {
           ))}
         </div>
       </div>
+
+      {/* Error */}
+      {error && (
+        <div style={{ padding: '0 16px' }}>
+          <div style={{
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.2)',
+            borderRadius: '14px', padding: '10px 14px',
+          }}>
+            <p style={{ fontSize: '13px', color: '#ef4444', fontWeight: '500' }}>{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Success Modal */}
       {posted && (

@@ -1,3 +1,4 @@
+import UserProfile from './pages/UserProfile';
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './ThemeContext';
@@ -71,12 +72,14 @@ function AppContent() {
             <Route path="/search" element={<Search />} />
             <Route path="/saved" element={<Saved />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/u/:username" element={<UserProfile />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/chat/:id" element={<ChatPage />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/create" element={<CreatePost />} />
             <Route path="/founder" element={<Founder />} />
             <Route path="/edit-profile" element={<EditProfile />} />
+            
           </Routes>
           <BottomNav />
         </div>

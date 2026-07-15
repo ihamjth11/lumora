@@ -174,3 +174,42 @@ export const toggleLikePost = async (postId) => {
     return { success: false, error: error.message };
   }
 };
+// ---------- GET USER PROFILE BY USERNAME (Public) ----------
+export const getProfileByUsername = async (username) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/users/profile/${username}`);
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- SEARCH USERS (Public) ----------
+export const searchUsers = async (query) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/users/search/${query}`);
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, users: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- FOLLOW / UNFOLLOW (Protected) ----------
+export const toggleFollow = async (targetUid) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/users/follow/${targetUid}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, following: data.following, followersCount: data.followersCount };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

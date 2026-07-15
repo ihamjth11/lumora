@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getUserPosts } from '../services/apiService';
 import { RiSettings4Line } from 'react-icons/ri';
 import { MdVerified } from 'react-icons/md';
-import { FiSun, FiMoon, FiHeart, FiGrid, FiBookmark, FiPlus, FiEdit2, FiLink, FiMapPin } from 'react-icons/fi';
+import { FiSun, FiMoon, FiHeart, FiGrid, FiBookmark, FiPlus, FiEdit2, FiLink, FiMapPin, FiPlay } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 
 function Profile() {
   const { colors, isDark, toggleTheme } = useTheme();
-  const { userProfile } = useAuth();
+  const { userProfile, currentUser } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('posts');
+  const [myPosts, setMyPosts] = useState([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
 
   const displayName = userProfile?.name || 'User';
   const username = userProfile?.username || 'user';
@@ -21,9 +24,25 @@ function Profile() {
   const bio = userProfile?.bio || '';
   const website = userProfile?.website || '';
   const location = userProfile?.location || '';
+  const postsCount = userProfile?.postsCount || 0;
 
   const websiteDisplay = website.replace(/^https?:\/\//, '').replace(/\/$/, '');
   const websiteHref = website.startsWith('http') ? website : 'https://' + website;
+
+  useEffect(() => {
+    if (currentUser?.uid) {
+      loadMyPosts();
+    }
+  }, [currentUser]);
+
+  const loadMyPosts = async () => {
+    setLoadingPosts(true);
+    const res = await getUserPosts(currentUser.uid);
+    if (res.success) {
+      setMyPosts(res.posts);
+    }
+    setLoadingPosts(false);
+  };
 
   return (
     <div style={{
@@ -142,7 +161,7 @@ function Profile() {
           marginBottom: '16px',
         }}>
           {[
-            { label: 'Posts', value: '0' },
+            { label: 'Posts', value: String(postsCount) },
             { label: 'Following', value: '0' },
             { label: 'Followers', value: '0' },
           ].map((s, i) => (
@@ -202,7 +221,7 @@ function Profile() {
       <div style={{
         display: 'flex',
         borderBottom: '1px solid ' + colors.border,
-        margin: '0 16px', marginBottom: '16px',
+        margin: '0 16px', marginBottom: '4px',
       }}>
         {[
           { key: 'posts', label: 'Posts', icon: <FiGrid /> },
@@ -224,32 +243,75 @@ function Profile() {
         ))}
       </div>
 
-      <div style={{ padding: '0 16px' }}>
+      <div style={{ padding: activeTab === 'posts' && myPosts.length > 0 ? '4px' : '0 16px' }}>
         {activeTab === 'posts' ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', padding: '40px 24px',
-            textAlign: 'center',
-          }}>
-            <div
-              onClick={() => navigate('/create')}
-              style={{
-                width: '80px', height: '80px', borderRadius: '50%',
-                background: '#6C63FF15', border: '2px dashed #6C63FF40',
-                display: 'flex', alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: '16px', cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}>
-              <FiPlus style={{ color: '#6C63FF', fontSize: '28px' }} />
+          loadingPosts ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '50px 0' }}>
+              <div style={{
+                width: '28px', height: '28px', borderRadius: '50%',
+                border: '3px solid rgba(108,99,255,0.2)',
+                borderTop: '3px solid #6C63FF',
+                animation: 'spin 0.8s linear infinite',
+              }} />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: colors.textPrimary, marginBottom: '8px' }}>
-              No posts yet
-            </h3>
-            <p style={{ fontSize: '14px', color: colors.textMuted, lineHeight: '1.6' }}>
-              Share your first learning post! ✨
-            </p>
-          </div>
+          ) : myPosts.length === 0 ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', padding: '40px 24px',
+              textAlign: 'center',
+            }}>
+              <div
+                onClick={() => navigate('/create')}
+                style={{
+                  width: '80px', height: '80px', borderRadius: '50%',
+                  background: '#6C63FF15', border: '2px dashed #6C63FF40',
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px', cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}>
+                <FiPlus style={{ color: '#6C63FF', fontSize: '28px' }} />
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: colors.textPrimary, marginBottom: '8px' }}>
+                No posts yet
+              </h3>
+              <p style={{ fontSize: '14px', color: colors.textMuted, lineHeight: '1.6' }}>
+                Share your first learning post! ✨
+              </p>
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px',
+            }}>
+              {myPosts.map((post) => (
+                <div
+                  key={post._id}
+                  style={{
+                    position: 'relative', aspectRatio: '1',
+                    background: '#000', cursor: 'pointer', overflow: 'hidden',
+                  }}
+                >
+                  {post.mediaType === 'video' ? (
+                    <>
+                      <video src={post.mediaUrl} style={{
+                        width: '100%', height: '100%', objectFit: 'cover',
+                      }} />
+                      <FiPlay style={{
+                        position: 'absolute', top: '6px', right: '6px',
+                        color: '#fff', fontSize: '16px',
+                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
+                      }} />
+                    </>
+                  ) : (
+                    <img src={post.mediaUrl} alt="post" style={{
+                      width: '100%', height: '100%', objectFit: 'cover',
+                    }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          )
         ) : null}
 
         {activeTab === 'saved' ? (

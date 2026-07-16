@@ -213,3 +213,34 @@ export const toggleFollow = async (targetUid) => {
     return { success: false, error: error.message };
   }
 };
+// ---------- ADD COMMENT (Protected) ----------
+export const addComment = async (postId, text) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/comments/${postId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, comment: data.comment };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- GET COMMENTS (Public) ----------
+export const getComments = async (postId) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/comments/${postId}`);
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, comments: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

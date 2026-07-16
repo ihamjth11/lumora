@@ -6,6 +6,7 @@ import { getFeed, toggleLikePost } from '../services/apiService';
 import Stories from '../components/Stories';
 import LumoraLogo from '../components/LumoraLogo';
 import Notifications from '../components/Notifications';
+import CommentModal from '../components/CommentModal';
 import { AiOutlinePlus } from 'react-icons/ai';
 import { FiSend, FiBell, FiHeart, FiMessageCircle, FiBookmark } from 'react-icons/fi';
 import { FaHeart } from 'react-icons/fa';
@@ -19,6 +20,7 @@ function Home() {
 
   const [posts, setPosts] = useState([]);
   const [loadingFeed, setLoadingFeed] = useState(true);
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
 
   const userAvatar = userProfile?.avatar || '🧑‍💻';
   const photoURL = userProfile?.photoURL || '';
@@ -37,7 +39,6 @@ function Home() {
   };
 
   const handleLike = async (postId) => {
-    // Optimistic UI update
     setPosts(prev => prev.map(p => {
       if (p._id !== postId) return p;
       const alreadyLiked = p.likedBy?.includes(currentUser?.uid);
@@ -317,10 +318,12 @@ function Home() {
                       {post.likesCount || 0}
                     </span>
                   </button>
-                  <button style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '5px', padding: 0,
-                  }}>
+                  <button
+                    onClick={() => setActiveCommentPostId(post._id)}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '5px', padding: 0,
+                    }}>
                     <FiMessageCircle style={{ color: colors.textSecondary, fontSize: '20px' }} />
                     <span style={{ fontSize: '13px', fontWeight: '600', color: colors.textSecondary }}>
                       {post.commentsCount || 0}
@@ -343,6 +346,20 @@ function Home() {
             );
           })}
         </div>
+      )}
+
+      {activeCommentPostId && (
+        <CommentModal
+          postId={activeCommentPostId}
+          onClose={() => setActiveCommentPostId(null)}
+          onCommentAdded={() => {
+            setPosts(prev => prev.map(p =>
+              p._id === activeCommentPostId
+                ? { ...p, commentsCount: (p.commentsCount || 0) + 1 }
+                : p
+            ));
+          }}
+        />
       )}
 
     </div>

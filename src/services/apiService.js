@@ -324,3 +324,18 @@ export const markStoryViewed = async (storyId) => {
     return { success: false, error: error.message };
   }
 };
+// ---------- DELETE POST (Protected) ----------
+export const deletePost = async (postId) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

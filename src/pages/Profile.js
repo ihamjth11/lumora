@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getUserPosts } from '../services/apiService';
+import { getUserPosts, deletePost } from '../services/apiService';
 import { RiSettings4Line } from 'react-icons/ri';
 import { MdVerified } from 'react-icons/md';
-import { FiSun, FiMoon, FiHeart, FiGrid, FiBookmark, FiPlus, FiEdit2, FiLink, FiMapPin, FiPlay } from 'react-icons/fi';
+import { FiSun, FiMoon, FiHeart, FiGrid, FiBookmark, FiPlus, FiEdit2, FiLink, FiMapPin, FiPlay, FiTrash2 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
 
 function Profile() {
@@ -15,6 +15,8 @@ function Profile() {
   const [activeTab, setActiveTab] = useState('posts');
   const [myPosts, setMyPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const displayName = userProfile?.name || 'User';
   const username = userProfile?.username || 'user';
@@ -42,6 +44,16 @@ function Profile() {
       setMyPosts(res.posts);
     }
     setLoadingPosts(false);
+  };
+
+  const handleDeletePost = async (postId) => {
+    setDeleting(true);
+    const res = await deletePost(postId);
+    setDeleting(false);
+    if (res.success) {
+      setMyPosts(prev => prev.filter(p => p._id !== postId));
+      setDeleteConfirmId(null);
+    }
   };
 
   return (
@@ -162,8 +174,8 @@ function Profile() {
         }}>
           {[
             { label: 'Posts', value: String(postsCount) },
-            { label: 'Following', value: '0' },
-            { label: 'Followers', value: '0' },
+            { label: 'Following', value: String(userProfile?.followingCount || 0) },
+            { label: 'Followers', value: String(userProfile?.followersCount || 0) },
           ].map((s, i) => (
             <div key={i} style={{ textAlign: 'center' }}>
               <p style={{ fontSize: '22px', fontWeight: '800', color: '#6C63FF' }}>
@@ -289,7 +301,7 @@ function Profile() {
                   key={post._id}
                   style={{
                     position: 'relative', aspectRatio: '1',
-                    background: '#000', cursor: 'pointer', overflow: 'hidden',
+                    background: '#000', overflow: 'hidden',
                   }}
                 >
                   {post.mediaType === 'video' ? (
@@ -308,6 +320,20 @@ function Profile() {
                       width: '100%', height: '100%', objectFit: 'cover',
                     }} />
                   )}
+
+                  {/* Delete button overlay */}
+                  <button
+                    onClick={() => setDeleteConfirmId(post._id)}
+                    style={{
+                      position: 'absolute', top: '4px', left: '4px',
+                      width: '24px', height: '24px', borderRadius: '50%',
+                      background: 'rgba(0,0,0,0.6)', border: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: '12px', cursor: 'pointer',
+                    }}
+                  >
+                    <FiTrash2 />
+                  </button>
                 </div>
               ))}
             </div>
@@ -344,6 +370,50 @@ function Profile() {
           </div>
         ) : null}
       </div>
+
+      {/* Delete Confirm Modal */}
+      {deleteConfirmId && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: colors.bgCard, borderRadius: '20px', padding: '24px',
+            margin: '0 24px', border: '1px solid ' + colors.border, textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🗑️</div>
+            <h3 style={{ fontSize: '17px', fontWeight: '800', color: colors.textPrimary, marginBottom: '8px' }}>
+              Delete this post?
+            </h3>
+            <p style={{ fontSize: '13px', color: colors.textMuted, marginBottom: '20px' }}>
+              This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                style={{
+                  flex: 1, padding: '12px', background: 'none',
+                  border: '1px solid ' + colors.border, borderRadius: '12px',
+                  color: colors.textPrimary, fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter',
+                }}>
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeletePost(deleteConfirmId)}
+                disabled={deleting}
+                style={{
+                  flex: 1, padding: '12px',
+                  background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                  border: 'none', borderRadius: '12px',
+                  color: '#fff', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter',
+                  opacity: deleting ? 0.7 : 1,
+                }}>
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

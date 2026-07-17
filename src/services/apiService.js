@@ -244,3 +244,83 @@ export const getComments = async (postId) => {
     return { success: false, error: error.message };
   }
 };
+// ---------- UPLOAD STORY MEDIA (Protected) ----------
+export const uploadStoryMedia = async (file) => {
+  try {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append("media", file);
+
+    const res = await fetch(`${API_BASE_URL}/upload/story-media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, url: data.url, mediaType: data.mediaType };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- CREATE STORY (Protected) ----------
+export const createStory = async (mediaUrl, mediaType) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/stories/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ mediaUrl, mediaType }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, story: data.story };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- GET ACTIVE STORIES (Public) ----------
+export const getActiveStories = async () => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/stories/active`);
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, storyGroups: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- GET MY STORIES (Protected) ----------
+export const getMyStories = async () => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/stories/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, stories: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- MARK STORY VIEWED (Protected) ----------
+export const markStoryViewed = async (storyId) => {
+  try {
+    const token = await getAuthToken();
+    await fetch(`${API_BASE_URL}/stories/${storyId}/view`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

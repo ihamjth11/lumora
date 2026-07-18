@@ -6,6 +6,7 @@ import { getProfileByUsername, toggleFollow, getUserPosts } from '../services/ap
 import { IoArrowBack } from 'react-icons/io5';
 import { MdVerified } from 'react-icons/md';
 import { FiGrid, FiLink, FiMapPin, FiPlay } from 'react-icons/fi';
+import { FiMessageCircle } from 'react-icons/fi';
 
 function UserProfile() {
   const { colors } = useTheme();
@@ -217,23 +218,39 @@ function UserProfile() {
 
         {/* Follow / Edit Button */}
         {!isOwnProfile && (
-          <button
-            onClick={handleFollowToggle}
-            disabled={followLoading}
-            style={{
-              width: '100%', padding: '10px',
-              background: isFollowing ? 'none' : 'linear-gradient(135deg, #6C63FF, #F72585)',
-              border: isFollowing ? '1px solid ' + colors.border : 'none',
-              borderRadius: '12px',
-              color: isFollowing ? colors.textPrimary : '#fff',
-              fontSize: '14px', fontWeight: '700',
-              cursor: followLoading ? 'not-allowed' : 'pointer', fontFamily: 'Inter',
-              opacity: followLoading ? 0.7 : 1,
-              transition: 'all 0.2s',
-            }}>
-            {followLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
-          </button>
-        )}
+  <div style={{ display: 'flex', gap: '8px' }}>
+    <button
+      onClick={handleFollowToggle}
+      disabled={followLoading}
+      style={{
+        flex: 1, padding: '10px',
+        background: isFollowing ? 'none' : 'linear-gradient(135deg, #6C63FF, #F72585)',
+        border: isFollowing ? '1px solid ' + colors.border : 'none',
+        borderRadius: '12px',
+        color: isFollowing ? colors.textPrimary : '#fff',
+        fontSize: '14px', fontWeight: '700',
+        cursor: followLoading ? 'not-allowed' : 'pointer', fontFamily: 'Inter',
+        opacity: followLoading ? 0.7 : 1,
+        transition: 'all 0.2s',
+      }}>
+      {followLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
+    </button>
+    <button
+      onClick={() => navigate('/chat/' + profile.username)}
+      style={{
+        flex: 1, padding: '10px',
+        background: 'none',
+        border: '1px solid ' + colors.border,
+        borderRadius: '12px',
+        color: colors.textPrimary,
+        fontSize: '14px', fontWeight: '700',
+        cursor: 'pointer', fontFamily: 'Inter',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+      }}>
+      <FiMessageCircle /> Message
+    </button>
+  </div>
+)}
       </div>
 
       {/* Interests */}

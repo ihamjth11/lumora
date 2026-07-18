@@ -339,3 +339,68 @@ export const deletePost = async (postId) => {
     return { success: false, error: error.message };
   }
 };
+// ---------- GET MY CONVERSATIONS (Protected) ----------
+export const getConversations = async () => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/conversations`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, conversations: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- GET OR CREATE CONVERSATION WITH USER (Protected) ----------
+export const getOrCreateConversation = async (targetUid) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/conversations/with/${targetUid}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, conversationId: data.conversationId };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- GET MESSAGES (Protected) ----------
+export const getMessages = async (conversationId) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/${conversationId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, messages: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- SEND MESSAGE (Protected) ----------
+export const sendMessage = async (conversationId, text) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/${conversationId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, message: data.message };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

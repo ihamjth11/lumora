@@ -404,3 +404,42 @@ export const sendMessage = async (conversationId, text) => {
     return { success: false, error: error.message };
   }
 };
+// ---------- UPLOAD CHAT MEDIA (Protected) ----------
+export const uploadChatMedia = async (file) => {
+  try {
+    const token = await getAuthToken();
+    const formData = new FormData();
+    formData.append("media", file);
+
+    const res = await fetch(`${API_BASE_URL}/upload/chat-media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, url: data.url, mediaType: data.mediaType };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- SEND MESSAGE WITH MEDIA (Protected) ----------
+export const sendMessageWithMedia = async (conversationId, text, mediaUrl, mediaType) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/${conversationId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ text, mediaUrl, mediaType }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, message: data.message };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

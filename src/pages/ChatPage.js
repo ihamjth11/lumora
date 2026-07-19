@@ -170,7 +170,8 @@ function ChatPage() {
   return (
     <div style={{
       background: 'linear-gradient(180deg, #050510 0%, #0a0a18 100%)',
-      height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      height: 'calc(100vh - var(--bottom-nav-height, 0px))',
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
       fontFamily: 'Inter, sans-serif',
     }}>
       <style>{`
@@ -317,8 +318,8 @@ function ChatPage() {
           padding: '12px 16px 0', flexShrink: 0, animation: 'slideUp 0.2s ease',
           display: 'flex', gap: '10px',
         }}>
-          <input type="file" accept="image/*" ref={photoInputRef} onChange={(e) => handlePickFile(e, 'image')} style={{ display: 'none' }} />
-          <input type="file" accept="image/*,video/*" capture="environment" ref={cameraInputRef} onChange={(e) => handlePickFile(e, e.target.files[0]?.type.startsWith('video') ? 'video' : 'image')} style={{ display: 'none' }} />
+         <input type="file" accept="image/*" ref={photoInputRef} onChange={(e) => handlePickFile(e, 'image')} style={{ display: 'none' }} />
+          <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={(e) => handlePickFile(e, 'image')} style={{ display: 'none' }} />
 
           {[
             { icon: <HiOutlinePhotograph />, label: 'Gallery', onClick: () => photoInputRef.current?.click(), color: '#6C63FF' },

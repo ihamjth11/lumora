@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './styles/global.css';
@@ -23,12 +23,9 @@ import EditProfile from './pages/EditProfile';
 import UserProfile from './pages/UserProfile';
 
 function MainAppLayout() {
-  const location = useLocation();
-  const isChatPage = location.pathname.startsWith('/chat/');
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#fafafa' }}>
-      {!isChatPage && <DesktopSidebar />}
+      <DesktopSidebar />
       <div style={{ flex: 1, minHeight: '100vh', background: '#fafafa' }}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -44,7 +41,7 @@ function MainAppLayout() {
           <Route path="/edit-profile" element={<EditProfile />} />
           <Route path="/u/:username" element={<UserProfile />} />
         </Routes>
-        {!isChatPage && <BottomNav />}
+        <BottomNav />
       </div>
     </div>
   );

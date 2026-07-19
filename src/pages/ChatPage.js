@@ -21,7 +21,7 @@ function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
-  const [pendingMedia, setPendingMedia] = useState(null); // { file, preview, kind }
+  const [pendingMedia, setPendingMedia] = useState(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
@@ -144,9 +144,13 @@ function ChatPage() {
   const formatTime = (date) => new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const formatRecordTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
+  const accentColor = '#6C63FF';
+  const bubbleColorOther = colors.bgCard;
+  const inputBg = colors.inputBg || colors.bgCard;
+
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050510' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.bgPrimary }}>
         <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid rgba(108,99,255,0.2)', borderTop: '3px solid #6C63FF', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -155,8 +159,8 @@ function ChatPage() {
 
   if (!otherUser) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#050510', padding: '24px', textAlign: 'center' }}>
-        <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.5)', marginBottom: '16px' }}>User not found</p>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: colors.bgPrimary, padding: '24px', textAlign: 'center' }}>
+        <p style={{ fontSize: '15px', color: colors.textMuted, marginBottom: '16px' }}>User not found</p>
         <button onClick={() => navigate('/messages')} style={{ padding: '10px 20px', background: 'linear-gradient(135deg, #6C63FF, #F72585)', border: 'none', borderRadius: '12px', color: '#fff', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter' }}>
           Back to Messages
         </button>
@@ -169,10 +173,11 @@ function ChatPage() {
 
   return (
     <div style={{
-      background: 'linear-gradient(180deg, #050510 0%, #0a0a18 100%)',
-      height: 'calc(100vh - var(--bottom-nav-height, 0px))',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      background: colors.bgPrimary,
+      minHeight: '100vh',
+      display: 'flex', flexDirection: 'column',
       fontFamily: 'Inter, sans-serif',
+      paddingBottom: 'var(--bottom-nav-height)',
     }}>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -182,14 +187,15 @@ function ChatPage() {
 
       {/* Header */}
       <div style={{
-        background: 'rgba(15,15,26,0.85)', backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        position: 'sticky', top: 0,
+        background: colors.navBg, backdropFilter: 'blur(16px)',
+        borderBottom: `1px solid ${colors.border}`,
         padding: '14px 16px', display: 'flex', alignItems: 'center',
-        gap: '12px', flexShrink: 0,
+        gap: '12px', flexShrink: 0, zIndex: 50,
       }}>
         <button onClick={() => navigate('/messages')} style={{
-          background: 'rgba(255,255,255,0.06)', border: 'none', width: '36px', height: '36px',
-          borderRadius: '12px', color: '#fff', fontSize: '18px', cursor: 'pointer',
+          background: isDark ? 'rgba(255,255,255,0.06)' : '#f3eeff', border: 'none', width: '36px', height: '36px',
+          borderRadius: '12px', color: colors.textPrimary, fontSize: '18px', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
           <IoArrowBack />
@@ -204,10 +210,10 @@ function ChatPage() {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff' }}>{otherUser.name}</span>
-            <MdVerified style={{ color: '#6C63FF', fontSize: '13px' }} />
+            <span style={{ fontSize: '14px', fontWeight: '700', color: colors.textPrimary }}>{otherUser.name}</span>
+            <MdVerified style={{ color: accentColor, fontSize: '13px' }} />
           </div>
-          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>@{otherUser.username}</span>
+          <span style={{ fontSize: '11px', color: colors.textMuted }}>@{otherUser.username}</span>
         </div>
       </div>
 
@@ -215,7 +221,7 @@ function ChatPage() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {messages.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>Say hi to {otherUser.name}! 👋</p>
+            <p style={{ fontSize: '13px', color: colors.textMuted }}>Say hi to {otherUser.name}! 👋</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -249,8 +255,8 @@ function ChatPage() {
                   )}
                   {msg.mediaType === 'audio' && (
                     <div style={{
-                      background: mine ? 'linear-gradient(135deg, #6C63FF, #a855f7)' : 'rgba(255,255,255,0.06)',
-                      border: mine ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                      background: mine ? 'linear-gradient(135deg, #6C63FF, #a855f7)' : bubbleColorOther,
+                      border: mine ? 'none' : `1px solid ${colors.border}`,
                       borderRadius: '18px', padding: '10px 14px', marginBottom: msg.text ? '4px' : 0,
                     }}>
                       <audio src={msg.mediaUrl} controls style={{ width: '220px', height: '32px' }} />
@@ -258,16 +264,16 @@ function ChatPage() {
                   )}
                   {msg.text && (
                     <div style={{
-                      background: mine ? 'linear-gradient(135deg, #6C63FF, #a855f7)' : 'rgba(255,255,255,0.06)',
-                      border: mine ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                      background: mine ? 'linear-gradient(135deg, #6C63FF, #a855f7)' : bubbleColorOther,
+                      border: mine ? 'none' : `1px solid ${colors.border}`,
                       borderRadius: mine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                       padding: '10px 14px',
-                      boxShadow: mine ? '0 2px 12px rgba(108,99,255,0.35)' : 'none',
+                      boxShadow: mine ? '0 2px 12px rgba(108,99,255,0.3)' : 'none',
                     }}>
-                      <p style={{ fontSize: '14px', color: '#fff', lineHeight: '1.4', wordBreak: 'break-word' }}>{msg.text}</p>
+                      <p style={{ fontSize: '14px', color: mine ? '#fff' : colors.textPrimary, lineHeight: '1.4', wordBreak: 'break-word' }}>{msg.text}</p>
                     </div>
                   )}
-                  <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '4px', textAlign: mine ? 'right' : 'left' }}>
+                  <p style={{ fontSize: '10px', color: colors.textMuted, marginTop: '4px', textAlign: mine ? 'right' : 'left' }}>
                     {formatTime(msg.createdAt)}
                   </p>
                 </div>
@@ -280,12 +286,10 @@ function ChatPage() {
 
       {/* Pending media preview */}
       {pendingMedia && (
-        <div style={{
-          padding: '10px 16px 0', flexShrink: 0,
-        }}>
+        <div style={{ padding: '10px 16px 0', flexShrink: 0 }}>
           <div style={{
             position: 'relative', display: 'inline-block',
-            background: 'rgba(255,255,255,0.06)', borderRadius: '16px', padding: '8px',
+            background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '16px', padding: '8px',
           }}>
             {pendingMedia.kind === 'image' && (
               <img src={pendingMedia.preview} alt="" style={{ height: '80px', borderRadius: '10px', display: 'block' }} />
@@ -295,8 +299,8 @@ function ChatPage() {
             )}
             {pendingMedia.kind === 'audio' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 10px' }}>
-                <IoMic style={{ color: '#6C63FF', fontSize: '20px' }} />
-                <span style={{ color: '#fff', fontSize: '13px' }}>Voice note ready</span>
+                <IoMic style={{ color: accentColor, fontSize: '20px' }} />
+                <span style={{ color: colors.textPrimary, fontSize: '13px' }}>Voice note ready</span>
               </div>
             )}
             <button onClick={cancelPendingMedia} style={{
@@ -318,7 +322,7 @@ function ChatPage() {
           padding: '12px 16px 0', flexShrink: 0, animation: 'slideUp 0.2s ease',
           display: 'flex', gap: '10px',
         }}>
-         <input type="file" accept="image/*" ref={photoInputRef} onChange={(e) => handlePickFile(e, 'image')} style={{ display: 'none' }} />
+          <input type="file" accept="image/*" ref={photoInputRef} onChange={(e) => handlePickFile(e, 'image')} style={{ display: 'none' }} />
           <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={(e) => handlePickFile(e, 'image')} style={{ display: 'none' }} />
 
           {[
@@ -326,34 +330,37 @@ function ChatPage() {
             { icon: <HiOutlineCamera />, label: 'Camera', onClick: () => cameraInputRef.current?.click(), color: '#F72585' },
           ].map((item, i) => (
             <button key={i} onClick={item.onClick} style={{
-              flex: 1, background: 'rgba(255,255,255,0.05)',
+              flex: 1, background: colors.bgCard,
               border: `1px solid ${item.color}33`, borderRadius: '16px',
               padding: '14px 8px', display: 'flex', flexDirection: 'column',
               alignItems: 'center', gap: '6px', cursor: 'pointer',
             }}>
               <span style={{ color: item.color, fontSize: '22px' }}>{item.icon}</span>
-              <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px', fontWeight: '600' }}>{item.label}</span>
+              <span style={{ color: colors.textMuted, fontSize: '11px', fontWeight: '600' }}>{item.label}</span>
             </button>
           ))}
         </div>
       )}
 
-      {/* Input Bar — Premium 2027 style */}
+      {/* Input Bar */}
       <div style={{
+        position: 'sticky', bottom: 0,
+        background: colors.navBg, backdropFilter: 'blur(16px)',
+        borderTop: `1px solid ${colors.border}`,
         padding: '12px 16px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
         flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px',
       }}>
         {isRecording ? (
           <div style={{
             flex: 1, display: 'flex', alignItems: 'center', gap: '10px',
-            background: 'rgba(247,37,133,0.1)', border: '1px solid rgba(247,37,133,0.3)',
+            background: 'rgba(247,37,133,0.08)', border: '1px solid rgba(247,37,133,0.3)',
             borderRadius: '24px', padding: '10px 16px',
           }}>
             <div style={{
               width: '10px', height: '10px', borderRadius: '50%', background: '#F72585',
               animation: 'pulse 1s ease infinite',
             }} />
-            <span style={{ color: '#fff', fontSize: '13px', fontWeight: '600', flex: 1 }}>
+            <span style={{ color: colors.textPrimary, fontSize: '13px', fontWeight: '600', flex: 1 }}>
               Recording... {formatRecordTime(recordSeconds)}
             </span>
             <button onClick={stopRecording} style={{
@@ -371,10 +378,10 @@ function ChatPage() {
               onClick={() => setShowAttachMenu(!showAttachMenu)}
               style={{
                 width: '40px', height: '40px', borderRadius: '14px', flexShrink: 0,
-                background: showAttachMenu ? 'linear-gradient(135deg, #6C63FF, #F72585)' : 'rgba(255,255,255,0.06)',
-                border: showAttachMenu ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                background: showAttachMenu ? 'linear-gradient(135deg, #6C63FF, #F72585)' : (isDark ? 'rgba(255,255,255,0.06)' : '#f3eeff'),
+                border: showAttachMenu ? 'none' : `1px solid ${colors.border}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: '18px', cursor: 'pointer',
+                color: showAttachMenu ? '#fff' : colors.textPrimary, fontSize: '18px', cursor: 'pointer',
                 transform: showAttachMenu ? 'rotate(45deg)' : 'none',
                 transition: 'transform 0.2s',
               }}>
@@ -383,8 +390,8 @@ function ChatPage() {
 
             <div style={{
               flex: 1, display: 'flex', alignItems: 'center',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: inputBg,
+              border: `1px solid ${colors.border}`,
               borderRadius: '24px', padding: '10px 16px', gap: '8px',
             }}>
               <input
@@ -395,7 +402,7 @@ function ChatPage() {
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 style={{
                   flex: 1, background: 'none', border: 'none', outline: 'none',
-                  color: '#fff', fontSize: '14px', fontFamily: 'Inter',
+                  color: colors.textPrimary, fontSize: '14px', fontFamily: 'Inter',
                 }}
               />
             </div>
@@ -416,10 +423,10 @@ function ChatPage() {
               </button>
             ) : (
               <button onClick={startRecording} style={{
-                width: '42px', height: '42px', borderRadius: '50%', border: 'none', flexShrink: 0,
-                background: 'rgba(255,255,255,0.06)',
+                width: '42px', height: '42px', borderRadius: '50%', border: `1px solid ${colors.border}`, flexShrink: 0,
+                background: isDark ? 'rgba(255,255,255,0.06)' : '#f3eeff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: '#fff', fontSize: '18px',
+                cursor: 'pointer', color: colors.textPrimary, fontSize: '18px',
               }}>
                 <IoMic />
               </button>

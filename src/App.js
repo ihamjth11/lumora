@@ -46,7 +46,6 @@ function MainAppLayout() {
     </div>
   );
 }
-
 function AppContent() {
   const { currentUser, userProfile, authLoading } = useAuth();
   const [splashDone, setSplashDone] = useState(false);

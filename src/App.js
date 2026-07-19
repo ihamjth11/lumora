@@ -10,7 +10,6 @@ import Search from './pages/Search';
 import Saved from './pages/Saved';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
-import ChatPage from './pages/ChatPage';
 import Settings from './pages/Settings';
 import CreatePost from './pages/CreatePost';
 import Founder from './pages/Founder';
@@ -34,7 +33,8 @@ function MainAppLayout() {
           <Route path="/saved" element={<Saved />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/messages" element={<Messages />} />
-          <Route path="/chat/:id" element={<ChatPage />} />
+          <Route path="/messages/:username" element={<Messages />} />
+          <Route path="/chat/:username" element={<Messages />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/create" element={<CreatePost />} />
           <Route path="/founder" element={<Founder />} />

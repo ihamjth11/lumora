@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './styles/global.css';
@@ -22,19 +22,6 @@ import EditProfile from './pages/EditProfile';
 import UserProfile from './pages/UserProfile';
 
 function MainAppLayout() {
-  const location = useLocation();
-  const isMessagesPage = location.pathname.startsWith('/messages') || location.pathname.startsWith('/chat');
-
-  if (isMessagesPage) {
-    return (
-      <Routes>
-        <Route path="/messages" element={<Messages />} />
-        <Route path="/messages/:username" element={<Messages />} />
-        <Route path="/chat/:username" element={<Messages />} />
-      </Routes>
-    );
-  }
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#fafafa' }}>
       <DesktopSidebar />
@@ -45,6 +32,9 @@ function MainAppLayout() {
           <Route path="/search" element={<Search />} />
           <Route path="/saved" element={<Saved />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/messages" element={<Messages />} />
+          <Route path="/messages/:username" element={<Messages />} />
+          <Route path="/chat/:username" element={<Messages />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/create" element={<CreatePost />} />
           <Route path="/founder" element={<Founder />} />
@@ -56,7 +46,6 @@ function MainAppLayout() {
     </div>
   );
 }
-
 function AppContent() {
   const { currentUser, userProfile, authLoading } = useAuth();
   const [splashDone, setSplashDone] = useState(false);

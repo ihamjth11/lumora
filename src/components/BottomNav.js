@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../ThemeContext';
+import useIsDesktop from '../hooks/useIsDesktop';
 import { AiFillHome, AiOutlineHome } from 'react-icons/ai';
 import { MdExplore, MdOutlineExplore } from 'react-icons/md';
 import { BiSearch } from 'react-icons/bi';
@@ -12,6 +13,9 @@ function BottomNav() {
   const location = useLocation();
   const path = location.pathname;
   const { colors } = useTheme();
+  const isDesktop = useIsDesktop();
+
+  if (isDesktop) return null;
 
   const tabs = [
     { route: '/', icon: path === '/' ? <AiFillHome /> : <AiOutlineHome />, label: 'Home' },

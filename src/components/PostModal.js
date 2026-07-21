@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getSinglePost, deletePost, editPostCaption, toggleLikePost } from '../services/apiService';
+import { getSinglePost, deletePost, editPostCaption, toggleLikePost, getComments, addComment } from '../services/apiService';
 import {
   IoClose, IoTrash, IoShareSocial, IoDownload, IoCreate,
-  IoCopy, IoLogoWhatsapp, IoCheckmark
+  IoCopy, IoLogoWhatsapp, IoCheckmark, IoSend, IoEllipsisVertical
 } from 'react-icons/io5';
 import { MdVerified } from 'react-icons/md';
-import { FiHeart } from 'react-icons/fi';
+import { FiHeart, FiMessageCircle } from 'react-icons/fi';
 import { FaHeart } from 'react-icons/fa';
 
 function PostModal({ postId, onClose, onDeleted }) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
 
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,11 +25,28 @@ function PostModal({ postId, onClose, onDeleted }) {
   const [editCaption, setEditCaption] = useState('');
   const [saving, setSaving] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState('caption'); // 'caption' | 'comments'
+  const [comments, setComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [sendingComment, setSendingComment] = useState(false);
+
+  const menuRef = useRef(null);
+  const shareRef = useRef(null);
 
   useEffect(() => {
     loadPost();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
+      if (shareRef.current && !shareRef.current.contains(e.target)) setShowShareMenu(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const loadPost = async () => {
     setLoading(true);
@@ -41,7 +58,31 @@ function PostModal({ postId, onClose, onDeleted }) {
     setLoading(false);
   };
 
-  const isOwner = post?.authorFirebaseUid === currentUser?.uid;
+  const loadComments = async () => {
+    setLoadingComments(true);
+    const res = await getComments(postId);
+    if (res.success) setComments(res.comments);
+    setLoadingComments(false);
+  };
+
+  const openComments = () => {
+    setActiveTab('comments');
+    loadComments();
+  };
+
+  const handleSendComment = async () => {
+    if (!commentText.trim() || sendingComment) return;
+    setSendingComment(true);
+    const res = await addComment(postId, commentText.trim());
+    setSendingComment(false);
+    if (res.success) {
+      setComments((prev) => [res.comment, ...prev]);
+      setCommentText('');
+      setPost((prev) => ({ ...prev, commentsCount: (prev.commentsCount || 0) + 1 }));
+    }
+  };
+
+  const isOwner = !!currentUser?.uid && post?.authorFirebaseUid === currentUser.uid;
   const isLiked = post?.likedBy?.includes(currentUser?.uid);
   const postUrl = post ? `${window.location.origin}/u/${post.author?.username}` : '';
 
@@ -97,28 +138,14 @@ function PostModal({ postId, onClose, onDeleted }) {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(postUrl);
     setLinkCopied(true);
+    setShowShareMenu(false);
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
   const handleWhatsAppShare = () => {
     const text = encodeURIComponent(`Check out this post on Lumora: ${postUrl}`);
     window.open(`https://wa.me/?text=${text}`, '_blank');
-  };
-
-  const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Lumora Post',
-          text: `Check out this post by @${post.author?.username} on Lumora`,
-          url: postUrl,
-        });
-      } catch (err) {
-        // user cancelled
-      }
-    } else {
-      setShowShareMenu(true);
-    }
+    setShowShareMenu(false);
   };
 
   const timeAgo = (date) => {
@@ -133,6 +160,8 @@ function PostModal({ postId, onClose, onDeleted }) {
     return new Date(date).toLocaleDateString();
   };
 
+  const isWide = typeof window !== 'undefined' && window.innerWidth > 768;
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 99999,
@@ -144,7 +173,8 @@ function PostModal({ postId, onClose, onDeleted }) {
         position: 'relative', background: colors.bgCard,
         width: '100%', maxWidth: '900px', maxHeight: '90vh',
         margin: '0 16px', borderRadius: '20px', overflow: 'hidden',
-        display: 'flex', flexDirection: window.innerWidth > 768 ? 'row' : 'column',
+        display: 'flex', flexDirection: isWide ? 'row' : 'column',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
       }}>
         <button onClick={onClose} style={{
           position: 'absolute', top: '12px', right: '12px', zIndex: 10,
@@ -173,9 +203,9 @@ function PostModal({ postId, onClose, onDeleted }) {
           <>
             {/* Media */}
             <div style={{
-              flex: window.innerWidth > 768 ? '1.2' : 'none',
+              flex: isWide ? '1.2' : 'none',
               background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              maxHeight: window.innerWidth > 768 ? '90vh' : '50vh',
+              maxHeight: isWide ? '90vh' : '50vh',
             }}>
               {post.mediaType === 'video' ? (
                 <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: '90vh', display: 'block' }} />
@@ -187,7 +217,7 @@ function PostModal({ postId, onClose, onDeleted }) {
             {/* Details */}
             <div style={{
               flex: 1, display: 'flex', flexDirection: 'column',
-              minWidth: window.innerWidth > 768 ? '300px' : 'auto',
+              minWidth: isWide ? '320px' : 'auto',
             }}>
               {/* Header */}
               <div style={{
@@ -215,29 +245,30 @@ function PostModal({ postId, onClose, onDeleted }) {
                 </div>
 
                 {isOwner && (
-                  <div style={{ position: 'relative' }}>
+                  <div ref={menuRef} style={{ position: 'relative' }}>
                     <button onClick={() => setShowMenu(!showMenu)} style={{
                       background: 'none', border: 'none', color: colors.textSecondary,
-                      fontSize: '20px', cursor: 'pointer', padding: '4px',
+                      fontSize: '18px', cursor: 'pointer', padding: '6px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                      ⋮
+                      <IoEllipsisVertical />
                     </button>
                     {showMenu && (
                       <div style={{
-                        position: 'absolute', top: '28px', right: 0, zIndex: 20,
+                        position: 'absolute', top: '32px', right: 0, zIndex: 20,
                         background: colors.bgCard, border: `1px solid ${colors.border}`,
-                        borderRadius: '12px', overflow: 'hidden', minWidth: '160px',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                        borderRadius: '14px', overflow: 'hidden', minWidth: '170px',
+                        boxShadow: '0 8px 28px rgba(0,0,0,0.25)',
                       }}>
-                        <button onClick={() => { setEditing(true); setShowMenu(false); }} style={{
-                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
+                        <button onClick={() => { setEditing(true); setShowMenu(false); setActiveTab('caption'); }} style={{
+                          width: '100%', padding: '11px 14px', background: 'none', border: 'none',
                           display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
                           color: colors.textPrimary, fontSize: '13px', fontFamily: 'Inter',
                         }}>
                           <IoCreate /> Edit Caption
                         </button>
                         <button onClick={() => { setShowDeleteConfirm(true); setShowMenu(false); }} style={{
-                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
+                          width: '100%', padding: '11px 14px', background: 'none', border: 'none',
                           display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
                           color: '#ef4444', fontSize: '13px', fontFamily: 'Inter',
                         }}>
@@ -249,59 +280,158 @@ function PostModal({ postId, onClose, onDeleted }) {
                 )}
               </div>
 
-              {/* Caption */}
-              <div style={{ padding: '14px', borderBottom: `1px solid ${colors.border}`, flex: 1, overflowY: 'auto' }}>
-                {editing ? (
-                  <div>
-                    <textarea
-                      value={editCaption}
-                      onChange={(e) => setEditCaption(e.target.value.slice(0, 500))}
-                      rows={4}
-                      style={{
-                        width: '100%', background: colors.inputBg || colors.bgCard,
-                        border: `1px solid ${colors.border}`, borderRadius: '10px',
-                        padding: '10px', color: colors.textPrimary, fontSize: '13px',
-                        fontFamily: 'Inter', resize: 'none', outline: 'none',
-                      }}
-                    />
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                      <button onClick={handleSaveEdit} disabled={saving} style={{
-                        flex: 1, padding: '8px', background: 'linear-gradient(135deg, #6C63FF, #F72585)',
-                        border: 'none', borderRadius: '10px', color: '#fff', fontWeight: '700',
-                        fontSize: '12px', cursor: 'pointer', fontFamily: 'Inter',
-                      }}>
-                        {saving ? 'Saving...' : 'Save'}
-                      </button>
-                      <button onClick={() => { setEditing(false); setEditCaption(post.caption || ''); }} style={{
-                        flex: 1, padding: '8px', background: 'none', border: `1px solid ${colors.border}`,
-                        borderRadius: '10px', color: colors.textPrimary, fontWeight: '700',
-                        fontSize: '12px', cursor: 'pointer', fontFamily: 'Inter',
-                      }}>
-                        Cancel
-                      </button>
+              {/* Tabs: Caption / Comments */}
+              <div style={{ display: 'flex', borderBottom: `1px solid ${colors.border}` }}>
+                {['caption', 'comments'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => tab === 'comments' ? openComments() : setActiveTab('caption')}
+                    style={{
+                      flex: 1, padding: '10px', background: 'none', border: 'none',
+                      borderBottom: activeTab === tab ? '2px solid #6C63FF' : '2px solid transparent',
+                      color: activeTab === tab ? '#6C63FF' : colors.textMuted,
+                      fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    }}
+                  >
+                    {tab === 'comments' ? <FiMessageCircle /> : null}
+                    {tab === 'caption' ? 'Post' : `Comments (${post.commentsCount || 0})`}
+                  </button>
+                ))}
+              </div>
+
+              {/* Content area */}
+              <div style={{ padding: '14px', flex: 1, overflowY: 'auto', minHeight: '160px' }}>
+                {activeTab === 'caption' ? (
+                  editing ? (
+                    <div>
+                      <textarea
+                        value={editCaption}
+                        onChange={(e) => setEditCaption(e.target.value.slice(0, 500))}
+                        rows={4}
+                        style={{
+                          width: '100%', background: colors.inputBg || colors.bgCard,
+                          border: `1px solid ${colors.border}`, borderRadius: '10px',
+                          padding: '10px', color: colors.textPrimary, fontSize: '13px',
+                          fontFamily: 'Inter', resize: 'none', outline: 'none',
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button onClick={handleSaveEdit} disabled={saving} style={{
+                          flex: 1, padding: '8px', background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+                          border: 'none', borderRadius: '10px', color: '#fff', fontWeight: '700',
+                          fontSize: '12px', cursor: 'pointer', fontFamily: 'Inter',
+                        }}>
+                          {saving ? 'Saving...' : 'Save'}
+                        </button>
+                        <button onClick={() => { setEditing(false); setEditCaption(post.caption || ''); }} style={{
+                          flex: 1, padding: '8px', background: 'none', border: `1px solid ${colors.border}`,
+                          borderRadius: '10px', color: colors.textPrimary, fontWeight: '700',
+                          fontSize: '12px', cursor: 'pointer', fontFamily: 'Inter',
+                        }}>
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: '13px', color: colors.textPrimary, lineHeight: '1.5' }}>
+                        <span style={{ fontWeight: '700' }}>{post.author?.username}</span>{' '}
+                        {post.caption || <span style={{ color: colors.textMuted }}>No caption</span>}
+                      </p>
+                      {post.category && (
+                        <span style={{
+                          display: 'inline-block', marginTop: '10px',
+                          fontSize: '11px', fontWeight: '700',
+                          background: '#6C63FF15', color: '#6C63FF',
+                          padding: '4px 10px', borderRadius: '12px',
+                        }}>
+                          {post.category}
+                        </span>
+                      )}
+                    </>
+                  )
                 ) : (
-                  <p style={{ fontSize: '13px', color: colors.textPrimary, lineHeight: '1.5' }}>
-                    <span style={{ fontWeight: '700' }}>{post.author?.username}</span>{' '}
-                    {post.caption || <span style={{ color: colors.textMuted }}>No caption</span>}
-                  </p>
-                )}
-                {post.category && (
-                  <span style={{
-                    display: 'inline-block', marginTop: '10px',
-                    fontSize: '11px', fontWeight: '700',
-                    background: '#6C63FF15', color: '#6C63FF',
-                    padding: '4px 10px', borderRadius: '12px',
-                  }}>
-                    {post.category}
-                  </span>
+                  <div>
+                    {loadingComments ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
+                        <div style={{
+                          width: '24px', height: '24px', borderRadius: '50%',
+                          border: '3px solid rgba(108,99,255,0.2)', borderTop: '3px solid #6C63FF',
+                          animation: 'spin 0.8s linear infinite',
+                        }} />
+                      </div>
+                    ) : comments.length === 0 ? (
+                      <p style={{ fontSize: '13px', color: colors.textMuted, textAlign: 'center', padding: '20px 0' }}>
+                        No comments yet. Be the first! 💬
+                      </p>
+                    ) : (
+                      comments.map((c) => (
+                        <div key={c._id} style={{ display: 'flex', gap: '10px', padding: '8px 0' }}>
+                          <div style={{
+                            width: '28px', height: '28px', borderRadius: '50%',
+                            background: c.author?.photoURL ? `url(${c.author.photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+                            backgroundSize: 'cover', backgroundPosition: 'center',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '12px', flexShrink: 0,
+                          }}>
+                            {!c.author?.photoURL && (c.author?.avatar || '🧑‍💻')}
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: '13px', color: colors.textPrimary }}>
+                              <span style={{ fontWeight: '700' }}>{c.author?.username || 'user'}</span> {c.text}
+                            </p>
+                            <p style={{ fontSize: '10px', color: colors.textMuted, marginTop: '2px' }}>{timeAgo(c.createdAt)}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
               </div>
 
+              {/* Comment input (only on comments tab) */}
+              {activeTab === 'comments' && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '10px 14px', borderTop: `1px solid ${colors.border}`,
+                }}>
+                  <div style={{
+                    width: '28px', height: '28px', borderRadius: '50%',
+                    background: userProfile?.photoURL ? `url(${userProfile.photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+                    backgroundSize: 'cover', backgroundPosition: 'center',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '12px', flexShrink: 0,
+                  }}>
+                    {!userProfile?.photoURL && (userProfile?.avatar || '🧑‍💻')}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Add a comment..."
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value.slice(0, 300))}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendComment()}
+                    style={{
+                      flex: 1, background: colors.inputBg || colors.bgCard,
+                      border: `1px solid ${colors.border}`, borderRadius: '20px',
+                      padding: '8px 14px', outline: 'none', color: colors.textPrimary,
+                      fontSize: '13px', fontFamily: 'Inter',
+                    }}
+                  />
+                  <button onClick={handleSendComment} disabled={!commentText.trim() || sendingComment} style={{
+                    background: 'none', border: 'none',
+                    color: commentText.trim() ? '#6C63FF' : colors.textMuted,
+                    fontSize: '18px', cursor: commentText.trim() ? 'pointer' : 'default', padding: 0,
+                    display: 'flex', alignItems: 'center',
+                  }}>
+                    <IoSend />
+                  </button>
+                </div>
+              )}
+
               {/* Actions */}
-              <div style={{ padding: '12px 14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
+              <div style={{ padding: '12px 14px', borderTop: `1px solid ${colors.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
                   <button onClick={handleLike} style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: '5px', padding: 0,
@@ -310,8 +440,16 @@ function PostModal({ postId, onClose, onDeleted }) {
                     <span style={{ fontSize: '13px', fontWeight: '600', color: colors.textSecondary }}>{post.likesCount || 0}</span>
                   </button>
 
-                  <div style={{ position: 'relative' }}>
-                    <button onClick={handleNativeShare} style={{
+                  <button onClick={openComments} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '5px', padding: 0,
+                  }}>
+                    <FiMessageCircle style={{ color: colors.textSecondary, fontSize: '20px' }} />
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: colors.textSecondary }}>{post.commentsCount || 0}</span>
+                  </button>
+
+                  <div ref={shareRef} style={{ position: 'relative' }}>
+                    <button onClick={() => setShowShareMenu(!showShareMenu)} style={{
                       background: 'none', border: 'none', cursor: 'pointer',
                       color: colors.textSecondary, fontSize: '20px', display: 'flex', alignItems: 'center',
                     }}>
@@ -319,28 +457,47 @@ function PostModal({ postId, onClose, onDeleted }) {
                     </button>
                     {showShareMenu && (
                       <div style={{
-                        position: 'absolute', bottom: '30px', left: 0, zIndex: 20,
+                        position: 'absolute', bottom: '32px', left: '50%', transform: 'translateX(-50%)', zIndex: 20,
                         background: colors.bgCard, border: `1px solid ${colors.border}`,
-                        borderRadius: '14px', overflow: 'hidden', minWidth: '180px',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                        borderRadius: '16px', overflow: 'hidden', minWidth: '200px',
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
                       }}>
+                        <div style={{ padding: '10px 14px', borderBottom: `1px solid ${colors.border}` }}>
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Share to
+                          </span>
+                        </div>
                         <button onClick={handleWhatsAppShare} style={{
-                          width: '100%', padding: '11px 14px', background: 'none', border: 'none',
+                          width: '100%', padding: '12px 14px', background: 'none', border: 'none',
                           display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
                           color: colors.textPrimary, fontSize: '13px', fontFamily: 'Inter',
                         }}>
-                          <IoLogoWhatsapp style={{ color: '#25D366', fontSize: '18px' }} /> WhatsApp
+                          <div style={{
+                            width: '28px', height: '28px', borderRadius: '9px', background: '#25D36622',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <IoLogoWhatsapp style={{ color: '#25D366', fontSize: '16px' }} />
+                          </div>
+                          WhatsApp
                         </button>
-                        <button onClick={() => { handleCopyLink(); setShowShareMenu(false); }} style={{
-                          width: '100%', padding: '11px 14px', background: 'none', border: 'none',
+                        <button onClick={handleCopyLink} style={{
+                          width: '100%', padding: '12px 14px', background: 'none', border: 'none',
                           display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
                           color: colors.textPrimary, fontSize: '13px', fontFamily: 'Inter',
                         }}>
-                          <IoCopy style={{ color: '#6C63FF', fontSize: '16px' }} /> Copy Link
+                          <div style={{
+                            width: '28px', height: '28px', borderRadius: '9px', background: '#6C63FF22',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            <IoCopy style={{ color: '#6C63FF', fontSize: '14px' }} />
+                          </div>
+                          Copy Link
                         </button>
                       </div>
                     )}
                   </div>
+
+                  <div style={{ flex: 1 }} />
 
                   <button onClick={handleDownload} style={{
                     background: 'none', border: 'none', cursor: 'pointer',
@@ -351,7 +508,7 @@ function PostModal({ postId, onClose, onDeleted }) {
                 </div>
 
                 {linkCopied && (
-                  <p style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <p style={{ fontSize: '11px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
                     <IoCheckmark /> Link copied!
                   </p>
                 )}
@@ -361,7 +518,6 @@ function PostModal({ postId, onClose, onDeleted }) {
         )}
       </div>
 
-      {/* Delete confirm */}
       {showDeleteConfirm && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',

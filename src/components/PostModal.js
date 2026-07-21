@@ -142,12 +142,48 @@ function PostModal({ postId, onClose, onDeleted }) {
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
+  const shareText = `Check out this post on Lumora`;
+
   const handleWhatsAppShare = () => {
-    const text = encodeURIComponent(`Check out this post on Lumora: ${postUrl}`);
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ': ' + postUrl)}`, '_blank');
     setShowShareMenu(false);
   };
 
+  const handleFacebookShare = () => {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`, '_blank');
+    setShowShareMenu(false);
+  };
+
+  const handleTwitterShare = () => {
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(postUrl)}`, '_blank');
+    setShowShareMenu(false);
+  };
+
+  const handleTelegramShare = () => {
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
+    setShowShareMenu(false);
+  };
+
+  const handleEmailShare = () => {
+    window.location.href = `mailto:?subject=${encodeURIComponent('Check this out on Lumora')}&body=${encodeURIComponent(shareText + ': ' + postUrl)}`;
+    setShowShareMenu(false);
+  };
+
+  const handleSmsShare = () => {
+    window.location.href = `sms:?body=${encodeURIComponent(shareText + ': ' + postUrl)}`;
+    setShowShareMenu(false);
+  };
+
+  const handleNativeDeviceShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Lumora', text: shareText, url: postUrl });
+        setShowShareMenu(false);
+      } catch (err) {
+        // user cancelled, do nothing
+      }
+    }
+  };
   const timeAgo = (date) => {
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
     if (seconds < 60) return 'now';
@@ -222,7 +258,7 @@ function PostModal({ postId, onClose, onDeleted }) {
               {/* Header */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '14px', borderBottom: `1px solid ${colors.border}`,
+                padding: '14px 44px 14px 14px', borderBottom: `1px solid ${colors.border}`,
               }}>
                 <div
                   onClick={() => { onClose(); navigate('/u/' + post.author?.username); }}
@@ -459,7 +495,8 @@ function PostModal({ postId, onClose, onDeleted }) {
                       <div style={{
                         position: 'absolute', bottom: '32px', left: '50%', transform: 'translateX(-50%)', zIndex: 20,
                         background: colors.bgCard, border: `1px solid ${colors.border}`,
-                        borderRadius: '16px', overflow: 'hidden', minWidth: '200px',
+                        borderRadius: '16px', overflow: 'hidden', minWidth: '220px',
+                        maxHeight: '320px', overflowY: 'auto',
                         boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
                       }}>
                         <div style={{ padding: '10px 14px', borderBottom: `1px solid ${colors.border}` }}>
@@ -467,32 +504,48 @@ function PostModal({ postId, onClose, onDeleted }) {
                             Share to
                           </span>
                         </div>
-                        <button onClick={handleWhatsAppShare} style={{
-                          width: '100%', padding: '12px 14px', background: 'none', border: 'none',
-                          display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                          color: colors.textPrimary, fontSize: '13px', fontFamily: 'Inter',
-                        }}>
-                          <div style={{
-                            width: '28px', height: '28px', borderRadius: '9px', background: '#25D36622',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+
+                        {typeof navigator.share === 'function' && (
+                          <button onClick={handleNativeDeviceShare} style={{
+                            width: '100%', padding: '12px 14px', background: 'none', border: 'none',
+                            borderBottom: `1px solid ${colors.border}`,
+                            display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                            color: colors.textPrimary, fontSize: '13px', fontFamily: 'Inter', fontWeight: '700',
                           }}>
-                            <IoLogoWhatsapp style={{ color: '#25D366', fontSize: '16px' }} />
-                          </div>
-                          WhatsApp
-                        </button>
-                        <button onClick={handleCopyLink} style={{
-                          width: '100%', padding: '12px 14px', background: 'none', border: 'none',
-                          display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                          color: colors.textPrimary, fontSize: '13px', fontFamily: 'Inter',
-                        }}>
-                          <div style={{
-                            width: '28px', height: '28px', borderRadius: '9px', background: '#6C63FF22',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            <div style={{
+                              width: '28px', height: '28px', borderRadius: '9px',
+                              background: 'linear-gradient(135deg, #6C63FF22, #F7258522)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              <IoShareSocial style={{ color: '#6C63FF', fontSize: '15px' }} />
+                            </div>
+                            Share via Device...
+                          </button>
+                        )}
+
+                        {[
+                          { label: 'WhatsApp', icon: <IoLogoWhatsapp style={{ color: '#25D366', fontSize: '16px' }} />, bg: '#25D36622', onClick: handleWhatsAppShare },
+                          { label: 'Facebook', icon: <span style={{ color: '#1877F2', fontWeight: '900', fontSize: '13px' }}>f</span>, bg: '#1877F222', onClick: handleFacebookShare },
+                          { label: 'Telegram', icon: <span style={{ fontSize: '15px' }}>✈️</span>, bg: '#0088cc22', onClick: handleTelegramShare },
+                          { label: 'X (Twitter)', icon: <span style={{ color: colors.textPrimary, fontWeight: '900', fontSize: '13px' }}>X</span>, bg: 'rgba(128,128,128,0.15)', onClick: handleTwitterShare },
+                          { label: 'Email', icon: <span style={{ fontSize: '15px' }}>✉️</span>, bg: '#ea433522', onClick: handleEmailShare },
+                          { label: 'SMS', icon: <span style={{ fontSize: '15px' }}>💬</span>, bg: '#34C75922', onClick: handleSmsShare },
+                          { label: 'Copy Link', icon: <IoCopy style={{ color: '#6C63FF', fontSize: '14px' }} />, bg: '#6C63FF22', onClick: handleCopyLink },
+                        ].map((item, i) => (
+                          <button key={i} onClick={item.onClick} style={{
+                            width: '100%', padding: '12px 14px', background: 'none', border: 'none',
+                            display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                            color: colors.textPrimary, fontSize: '13px', fontFamily: 'Inter',
                           }}>
-                            <IoCopy style={{ color: '#6C63FF', fontSize: '14px' }} />
-                          </div>
-                          Copy Link
-                        </button>
+                            <div style={{
+                              width: '28px', height: '28px', borderRadius: '9px', background: item.bg,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {item.icon}
+                            </div>
+                            {item.label}
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>

@@ -7,6 +7,7 @@ import { RiSettings4Line } from 'react-icons/ri';
 import { MdVerified } from 'react-icons/md';
 import { FiSun, FiMoon, FiHeart, FiGrid, FiBookmark, FiPlus, FiEdit2, FiLink, FiMapPin, FiPlay, FiTrash2 } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
+import PostModal from '../components/PostModal';
 
 function Profile() {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -16,6 +17,7 @@ function Profile() {
   const [myPosts, setMyPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [activePostId, setActivePostId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   const displayName = userProfile?.name || 'User';
@@ -296,12 +298,13 @@ function Profile() {
             <div style={{
               display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px',
             }}>
-              {myPosts.map((post) => (
+             {myPosts.map((post) => (
                 <div
                   key={post._id}
+                  onClick={() => setActivePostId(post._id)}
                   style={{
                     position: 'relative', aspectRatio: '1',
-                    background: '#000', overflow: 'hidden',
+                    background: '#000', overflow: 'hidden', cursor: 'pointer',
                   }}
                 >
                   {post.mediaType === 'video' ? (
@@ -322,18 +325,7 @@ function Profile() {
                   )}
 
                   {/* Delete button overlay */}
-                  <button
-                    onClick={() => setDeleteConfirmId(post._id)}
-                    style={{
-                      position: 'absolute', top: '4px', left: '4px',
-                      width: '24px', height: '24px', borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.6)', border: 'none',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#fff', fontSize: '12px', cursor: 'pointer',
-                    }}
-                  >
-                    <FiTrash2 />
-                  </button>
+                  
                 </div>
               ))}
             </div>
@@ -413,6 +405,15 @@ function Profile() {
             </div>
           </div>
         </div>
+      )}
+      {activePostId && (
+        <PostModal
+          postId={activePostId}
+          onClose={() => setActivePostId(null)}
+          onDeleted={(deletedId) => {
+            setMyPosts((prev) => prev.filter((p) => p._id !== deletedId));
+          }}
+        />
       )}
     </div>
   );

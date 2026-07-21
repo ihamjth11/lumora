@@ -443,3 +443,34 @@ export const sendMessageWithMedia = async (conversationId, text, mediaUrl, media
     return { success: false, error: error.message };
   }
 };
+// ---------- GET SINGLE POST (Public) ----------
+export const getSinglePost = async (postId) => {
+  try {
+    const res = await fetch(`${API_BASE_URL}/posts/single/${postId}`);
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, post: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- EDIT POST CAPTION (Protected) ----------
+export const editPostCaption = async (postId, caption) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ caption }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, post: data.post };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

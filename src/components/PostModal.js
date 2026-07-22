@@ -8,8 +8,13 @@ import {
 } from '../services/apiService';
 import {
   IoClose, IoTrash, IoShareSocial, IoDownload, IoCreate,
-  IoCopy, IoLogoWhatsapp, IoCheckmark, IoSend, IoEllipsisVertical
+  IoCopy, IoCheckmark, IoSend, IoEllipsisVertical
 } from 'react-icons/io5';
+import {
+  FaWhatsapp, FaFacebook, FaTelegram, FaXTwitter, FaEnvelope
+} from 'react-icons/fa6';
+import { HiDotsHorizontal } from 'react-icons/hi';
+import { BsChatDotsFill } from 'react-icons/bs';
 import { MdVerified } from 'react-icons/md';
 import { FiHeart, FiMessageCircle } from 'react-icons/fi';
 import { FaHeart } from 'react-icons/fa';
@@ -580,14 +585,14 @@ function PostModal({ postId, onClose, onDeleted }) {
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
                 {[
-                  { label: 'Copy Link', icon: '🔗', color: '#6C63FF', bg: '#6C63FF15', onClick: handleCopyLink },
-                  { label: 'WhatsApp', icon: '💚', color: '#25D366', bg: '#25D36615', onClick: handleWhatsAppShare },
-                  { label: 'Facebook', icon: '🔵', color: '#1877F2', bg: '#1877F215', onClick: handleFacebookShare },
-                  { label: 'Telegram', icon: '✈️', color: '#0088cc', bg: '#0088cc15', onClick: handleTelegramShare },
-                  { label: 'X', icon: '✖️', color: colors.textPrimary, bg: 'rgba(0,0,0,0.08)', onClick: handleTwitterShare },
-                  { label: 'Email', icon: '📧', color: '#EA4335', bg: '#EA433515', onClick: handleEmailShare },
-                  { label: 'SMS', icon: '💬', color: '#34C759', bg: '#34C75915', onClick: handleSmsShare },
-                  { label: 'More', icon: '⋯', color: '#a855f7', bg: '#a855f715', onClick: handleNativeDeviceShare },
+                  { label: 'Copy Link', icon: <IoCopy size={22} color="#6C63FF" />, color: '#6C63FF', bg: '#6C63FF15', onClick: handleCopyLink },
+                  { label: 'WhatsApp', icon: <FaWhatsapp size={22} color="#25D366" />, color: '#25D366', bg: '#25D36615', onClick: handleWhatsAppShare },
+                  { label: 'Facebook', icon: <FaFacebook size={22} color="#1877F2" />, color: '#1877F2', bg: '#1877F215', onClick: handleFacebookShare },
+                  { label: 'Telegram', icon: <FaTelegram size={22} color="#0088cc" />, color: '#0088cc', bg: '#0088cc15', onClick: handleTelegramShare },
+                  { label: 'X', icon: <FaXTwitter size={20} color={colors.textPrimary} />, color: colors.textPrimary, bg: 'rgba(0,0,0,0.08)', onClick: handleTwitterShare },
+                  { label: 'Email', icon: <FaEnvelope size={20} color="#EA4335" />, color: '#EA4335', bg: '#EA433515', onClick: handleEmailShare },
+                  { label: 'SMS', icon: <BsChatDotsFill size={20} color="#34C759" />, color: '#34C759', bg: '#34C75915', onClick: handleSmsShare },
+                  { label: 'More', icon: <HiDotsHorizontal size={24} color="#a855f7" />, color: '#a855f7', bg: '#a855f715', onClick: handleNativeDeviceShare },
                 ].map((item, i) => (
                   <button key={i} onClick={item.onClick} style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
@@ -597,7 +602,6 @@ function PostModal({ postId, onClose, onDeleted }) {
                       width: '52px', height: '52px', borderRadius: '16px',
                       background: item.bg, border: `1px solid ${item.color}25`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '22px',
                     }}>
                       {item.icon}
                     </div>

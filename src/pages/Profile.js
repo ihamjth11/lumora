@@ -122,13 +122,16 @@ function Profile() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: '800', color: colors.textPrimary }}>
-                {displayName}
+              <h2 style={{
+                fontSize: '19px', fontWeight: '800',
+                background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>
+                {'@' + username}
               </h2>
-              <MdVerified style={{ color: '#6C63FF', fontSize: '18px', flexShrink: 0 }} />
+              <MdVerified style={{ color: '#6C63FF', fontSize: '17px', flexShrink: 0 }} />
             </div>
-            <p style={{ fontSize: '13px', color: colors.textMuted, marginTop: '2px' }}>{'@' + username}</p>
-
+            <p style={{ fontSize: '13px', color: colors.textSecondary, marginTop: '2px', fontWeight: '600' }}>{displayName}</p>
             {bio ? (
               <p style={{
                 fontSize: '13px', color: colors.textSecondary,

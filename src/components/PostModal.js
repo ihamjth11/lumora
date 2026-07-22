@@ -654,7 +654,7 @@ function PostModal({ postId, onClose, onDeleted }) {
             </div>
           </div>
         </div>
-      )}
+      
     </div>
   );
 }

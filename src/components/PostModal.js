@@ -2,7 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getSinglePost, deletePost, editPostCaption, toggleLikePost, getComments, addComment, getConversations, getOrCreateConversation, sendMessageWithMedia } from '../services/apiService';
+import {
+  getSinglePost, deletePost, editPostCaption, toggleLikePost, getComments, addComment,
+  getConversations, getOrCreateConversation, sendMessageWithMedia
+} from '../services/apiService';
 import {
   IoClose, IoTrash, IoShareSocial, IoDownload, IoCreate,
   IoCopy, IoLogoWhatsapp, IoCheckmark, IoSend, IoEllipsisVertical
@@ -25,7 +28,7 @@ function PostModal({ postId, onClose, onDeleted }) {
   const [editCaption, setEditCaption] = useState('');
   const [saving, setSaving] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState('caption'); // 'caption' | 'comments'
+  const [activeTab, setActiveTab] = useState('caption');
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentText, setCommentText] = useState('');
@@ -34,7 +37,6 @@ function PostModal({ postId, onClose, onDeleted }) {
   const [sentToUsers, setSentToUsers] = useState([]);
 
   const menuRef = useRef(null);
-  const shareRef = useRef(null);
 
   useEffect(() => {
     loadPost();
@@ -45,7 +47,6 @@ function PostModal({ postId, onClose, onDeleted }) {
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
-      if (shareRef.current && !shareRef.current.contains(e.target)) setShowShareMenu(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -60,6 +61,7 @@ function PostModal({ postId, onClose, onDeleted }) {
     }
     setLoading(false);
   };
+
   const loadShareFollowers = async () => {
     const res = await getConversations();
     if (res.success) {
@@ -94,6 +96,7 @@ function PostModal({ postId, onClose, onDeleted }) {
   const isOwner = !!currentUser?.uid && post?.authorFirebaseUid === currentUser.uid;
   const isLiked = post?.likedBy?.includes(currentUser?.uid);
   const postUrl = post ? `${window.location.origin}/u/${post.author?.username}` : '';
+  const shareText = 'Check out this post on Lumora';
 
   const handleLike = async () => {
     if (!post) return;
@@ -147,52 +150,43 @@ function PostModal({ postId, onClose, onDeleted }) {
   const handleCopyLink = () => {
     navigator.clipboard.writeText(postUrl);
     setLinkCopied(true);
-    setShowShareMenu(false);
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
-  const shareText = `Check out this post on Lumora`;
-
   const handleWhatsAppShare = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ': ' + postUrl)}`, '_blank');
-    setShowShareMenu(false);
   };
 
   const handleFacebookShare = () => {
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`, '_blank');
-    setShowShareMenu(false);
   };
 
   const handleTwitterShare = () => {
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(postUrl)}`, '_blank');
-    setShowShareMenu(false);
   };
 
   const handleTelegramShare = () => {
     window.open(`https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
-    setShowShareMenu(false);
   };
 
   const handleEmailShare = () => {
     window.location.href = `mailto:?subject=${encodeURIComponent('Check this out on Lumora')}&body=${encodeURIComponent(shareText + ': ' + postUrl)}`;
-    setShowShareMenu(false);
   };
 
   const handleSmsShare = () => {
     window.location.href = `sms:?body=${encodeURIComponent(shareText + ': ' + postUrl)}`;
-    setShowShareMenu(false);
   };
 
   const handleNativeDeviceShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Lumora', text: shareText, url: postUrl });
-        setShowShareMenu(false);
       } catch (err) {
-        // user cancelled, do nothing
+        // user cancelled
       }
     }
   };
+
   const handleShareToUser = async (user) => {
     if (sentToUsers.includes(user._id)) return;
     const convRes = await getOrCreateConversation(user.firebaseUid);
@@ -201,6 +195,7 @@ function PostModal({ postId, onClose, onDeleted }) {
       setSentToUsers((prev) => [...prev, user._id]);
     }
   };
+
   const timeAgo = (date) => {
     const seconds = Math.floor((new Date() - new Date(date)) / 1000);
     if (seconds < 60) return 'now';
@@ -220,6 +215,7 @@ function PostModal({ postId, onClose, onDeleted }) {
       position: 'fixed', inset: 0, zIndex: 99999,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }`}</style>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)' }} />
 
       <div style={{
@@ -246,7 +242,6 @@ function PostModal({ postId, onClose, onDeleted }) {
               border: '3px solid rgba(108,99,255,0.2)', borderTop: '3px solid #6C63FF',
               animation: 'spin 0.8s linear infinite',
             }} />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         ) : !post ? (
           <div style={{ flex: 1, padding: '60px', textAlign: 'center' }}>
@@ -254,7 +249,6 @@ function PostModal({ postId, onClose, onDeleted }) {
           </div>
         ) : (
           <>
-            {/* Media */}
             <div style={{
               flex: isWide ? '1.2' : 'none',
               background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -267,12 +261,10 @@ function PostModal({ postId, onClose, onDeleted }) {
               )}
             </div>
 
-            {/* Details */}
             <div style={{
               flex: 1, display: 'flex', flexDirection: 'column',
               minWidth: isWide ? '320px' : 'auto',
             }}>
-              {/* Header */}
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
                 padding: '14px 44px 14px 14px', borderBottom: `1px solid ${colors.border}`,
@@ -333,7 +325,6 @@ function PostModal({ postId, onClose, onDeleted }) {
                 )}
               </div>
 
-              {/* Tabs: Caption / Comments */}
               <div style={{ display: 'flex', borderBottom: `1px solid ${colors.border}` }}>
                 {['caption', 'comments'].map((tab) => (
                   <button
@@ -353,7 +344,6 @@ function PostModal({ postId, onClose, onDeleted }) {
                 ))}
               </div>
 
-              {/* Content area */}
               <div style={{ padding: '14px', flex: 1, overflowY: 'auto', minHeight: '160px' }}>
                 {activeTab === 'caption' ? (
                   editing ? (
@@ -443,7 +433,6 @@ function PostModal({ postId, onClose, onDeleted }) {
                 )}
               </div>
 
-              {/* Comment input (only on comments tab) */}
               {activeTab === 'comments' && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '8px',
@@ -482,7 +471,6 @@ function PostModal({ postId, onClose, onDeleted }) {
                 </div>
               )}
 
-              {/* Actions */}
               <div style={{ padding: '12px 14px', borderTop: `1px solid ${colors.border}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
                   <button onClick={handleLike} style={{
@@ -501,129 +489,134 @@ function PostModal({ postId, onClose, onDeleted }) {
                     <span style={{ fontSize: '13px', fontWeight: '600', color: colors.textSecondary }}>{post.commentsCount || 0}</span>
                   </button>
 
-                  <div ref={shareRef} style={{ position: 'relative' }}>
-                    <button onClick={() => setShowShareMenu(!showShareMenu)} style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      color: colors.textSecondary, fontSize: '20px', display: 'flex', alignItems: 'center',
-                    }}>
-                      <IoShareSocial />
-                    </button>
-                   {showShareMenu && (
-                      <div
-                        ref={shareRef}
-                        style={{
-                          position: 'fixed', inset: 0, zIndex: 99998,
-                          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-                        }}
-                      >
-                        <div onClick={() => setShowShareMenu(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
-                        <div style={{
-                          position: 'relative', width: '100%', maxWidth: '480px',
-                          background: colors.bgCard,
-                          borderRadius: '24px 24px 0 0',
-                          padding: '0 0 20px',
-                          boxShadow: '0 -8px 40px rgba(0,0,0,0.3)',
-                          animation: 'slideUp 0.25s ease',
-                        }}>
-                          <style>{`@keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }`}</style>
+                  <button onClick={() => setShowShareMenu(true)} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: colors.textSecondary, fontSize: '20px', display: 'flex', alignItems: 'center',
+                  }}>
+                    <IoShareSocial />
+                  </button>
 
-                          {/* Handle */}
-                          <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
-                            <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: colors.border }} />
-                          </div>
+                  <div style={{ flex: 1 }} />
 
-                          {/* Title */}
-                          <div style={{ padding: '8px 20px 14px', borderBottom: `1px solid ${colors.border}` }}>
-                            <p style={{
-                              fontSize: '15px', fontWeight: '800', color: colors.textPrimary,
-                              background: 'linear-gradient(135deg, #6C63FF, #F72585)',
-                              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                            }}>
-                              Share Post
-                            </p>
-                          </div>
-
-                          {/* Send to Friends/Followers row */}
-                          {shareFollowers.length > 0 && (
-                            <div style={{ padding: '14px 20px', borderBottom: `1px solid ${colors.border}` }}>
-                              <p style={{ fontSize: '11px', fontWeight: '700', color: colors.textMuted, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                Send to
-                              </p>
-                              <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '4px' }}>
-                                {shareFollowers.map((user) => (
-                                  <div
-                                    key={user._id}
-                                    onClick={() => handleShareToUser(user)}
-                                    style={{
-                                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-                                      cursor: 'pointer', flexShrink: 0,
-                                    }}
-                                  >
-                                    <div style={{
-                                      width: '52px', height: '52px', borderRadius: '50%',
-                                      background: user.photoURL ? `url(${user.photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
-                                      backgroundSize: 'cover', backgroundPosition: 'center',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                      fontSize: '22px',
-                                      border: sentToUsers.includes(user._id) ? '2px solid #6C63FF' : '2px solid transparent',
-                                      transition: 'border 0.2s',
-                                    }}>
-                                      {!user.photoURL && (user.avatar || '🧑‍💻')}
-                                    </div>
-                                    <span style={{ fontSize: '10px', color: colors.textSecondary, maxWidth: '52px', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                      {sentToUsers.includes(user._id) ? '✓ Sent' : user.username}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* External share options */}
-                          <div style={{ padding: '14px 20px' }}>
-                            <p style={{ fontSize: '11px', fontWeight: '700', color: colors.textMuted, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                              Share to
-                            </p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                              {[
-                                { label: 'Copy Link', icon: '🔗', color: '#6C63FF', bg: '#6C63FF15', onClick: handleCopyLink },
-                                { label: 'WhatsApp', icon: '💚', color: '#25D366', bg: '#25D36615', onClick: handleWhatsAppShare },
-                                { label: 'Facebook', icon: '🔵', color: '#1877F2', bg: '#1877F215', onClick: handleFacebookShare },
-                                { label: 'Telegram', icon: '✈️', color: '#0088cc', bg: '#0088cc15', onClick: handleTelegramShare },
-                                { label: 'X', icon: '✖️', color: colors.textPrimary, bg: 'rgba(0,0,0,0.08)', onClick: handleTwitterShare },
-                                { label: 'Email', icon: '📧', color: '#EA4335', bg: '#EA433515', onClick: handleEmailShare },
-                                { label: 'SMS', icon: '💬', color: '#34C759', bg: '#34C75915', onClick: handleSmsShare },
-                                { label: 'More', icon: '⋯', color: '#a855f7', bg: '#a855f715', onClick: handleNativeDeviceShare },
-                              ].map((item, i) => (
-                                <button key={i} onClick={item.onClick} style={{
-                                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-                                  background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
-                                }}>
-                                  <div style={{
-                                    width: '52px', height: '52px', borderRadius: '16px',
-                                    background: item.bg, border: `1px solid ${item.color}25`,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '22px', transition: 'transform 0.15s',
-                                  }}>
-                                    {item.icon}
-                                  </div>
-                                  <span style={{ fontSize: '10px', color: colors.textSecondary, fontFamily: 'Inter', fontWeight: '600' }}>
-                                    {item.label}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {linkCopied && (
-                            <div style={{ margin: '0 20px', padding: '10px 14px', background: '#10b98115', borderRadius: '12px', border: '1px solid #10b98130' }}>
-                              <p style={{ fontSize: '12px', color: '#10b981', fontWeight: '600', textAlign: 'center' }}>✓ Link copied to clipboard!</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                  <button onClick={handleDownload} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: colors.textSecondary, fontSize: '20px', display: 'flex', alignItems: 'center',
+                  }}>
+                    <IoDownload />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
+
+      {showShareMenu && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 999998,
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        }}>
+          <div onClick={() => setShowShareMenu(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
+          <div style={{
+            position: 'relative', width: '100%', maxWidth: '480px',
+            background: colors.bgCard,
+            borderRadius: '24px 24px 0 0',
+            padding: '0 0 20px',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.3)',
+            animation: 'slideUp 0.25s ease',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
+              <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: colors.border }} />
+            </div>
+
+            <div style={{ padding: '8px 20px 14px', borderBottom: `1px solid ${colors.border}` }}>
+              <p style={{
+                fontSize: '15px', fontWeight: '800',
+                background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>
+                Share Post
+              </p>
+            </div>
+
+            {shareFollowers.length > 0 && (
+              <div style={{ padding: '14px 20px', borderBottom: `1px solid ${colors.border}` }}>
+                <p style={{ fontSize: '11px', fontWeight: '700', color: colors.textMuted, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Send to
+                </p>
+                <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  {shareFollowers.map((user) => (
+                    <div
+                      key={user._id}
+                      onClick={() => handleShareToUser(user)}
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                        cursor: 'pointer', flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        width: '52px', height: '52px', borderRadius: '50%',
+                        background: user.photoURL ? `url(${user.photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+                        backgroundSize: 'cover', backgroundPosition: 'center',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '22px',
+                        border: sentToUsers.includes(user._id) ? '2px solid #6C63FF' : '2px solid transparent',
+                        transition: 'border 0.2s',
+                      }}>
+                        {!user.photoURL && (user.avatar || '🧑‍💻')}
+                      </div>
+                      <span style={{ fontSize: '10px', color: colors.textSecondary, maxWidth: '52px', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {sentToUsers.includes(user._id) ? '✓ Sent' : user.username}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ padding: '14px 20px' }}>
+              <p style={{ fontSize: '11px', fontWeight: '700', color: colors.textMuted, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Share to
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                {[
+                  { label: 'Copy Link', icon: '🔗', color: '#6C63FF', bg: '#6C63FF15', onClick: handleCopyLink },
+                  { label: 'WhatsApp', icon: '💚', color: '#25D366', bg: '#25D36615', onClick: handleWhatsAppShare },
+                  { label: 'Facebook', icon: '🔵', color: '#1877F2', bg: '#1877F215', onClick: handleFacebookShare },
+                  { label: 'Telegram', icon: '✈️', color: '#0088cc', bg: '#0088cc15', onClick: handleTelegramShare },
+                  { label: 'X', icon: '✖️', color: colors.textPrimary, bg: 'rgba(0,0,0,0.08)', onClick: handleTwitterShare },
+                  { label: 'Email', icon: '📧', color: '#EA4335', bg: '#EA433515', onClick: handleEmailShare },
+                  { label: 'SMS', icon: '💬', color: '#34C759', bg: '#34C75915', onClick: handleSmsShare },
+                  { label: 'More', icon: '⋯', color: '#a855f7', bg: '#a855f715', onClick: handleNativeDeviceShare },
+                ].map((item, i) => (
+                  <button key={i} onClick={item.onClick} style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                    background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
+                  }}>
+                    <div style={{
+                      width: '52px', height: '52px', borderRadius: '16px',
+                      background: item.bg, border: `1px solid ${item.color}25`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '22px',
+                    }}>
+                      {item.icon}
+                    </div>
+                    <span style={{ fontSize: '10px', color: colors.textSecondary, fontFamily: 'Inter', fontWeight: '600' }}>
+                      {item.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {linkCopied && (
+              <div style={{ margin: '0 20px', padding: '10px 14px', background: '#10b98115', borderRadius: '12px', border: '1px solid #10b98130' }}>
+                <p style={{ fontSize: '12px', color: '#10b981', fontWeight: '600', textAlign: 'center' }}>✓ Link copied to clipboard!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {showDeleteConfirm && (
         <div style={{
@@ -654,7 +647,7 @@ function PostModal({ postId, onClose, onDeleted }) {
             </div>
           </div>
         </div>
-      
+      )}
     </div>
   );
 }

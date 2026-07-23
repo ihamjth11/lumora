@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getFeed, toggleLikePost } from '../services/apiService';
+import { getFeed, toggleLikePost, toggleSavePost } from '../services/apiService';
 import Stories from '../components/Stories';
 import LumoraLogo from '../components/LumoraLogo';
 import Notifications from '../components/Notifications';
 import CommentModal from '../components/CommentModal';
 import { AiOutlinePlus } from 'react-icons/ai';
-import { FiSend, FiBell, FiHeart, FiMessageCircle, FiBookmark } from 'react-icons/fi';
+import { FiSend, FiBell, FiHeart, FiMessageCircle } from 'react-icons/fi';
+import { BsBookmark, BsBookmarkFill } from 'react-icons/bs';
 import { FaHeart } from 'react-icons/fa';
+
 
 function Home() {
   const { colors } = useTheme();
@@ -52,6 +54,19 @@ function Home() {
     }));
 
     await toggleLikePost(postId);
+  };
+  const handleSave = async (postId) => {
+    setPosts(prev => prev.map(p => {
+      if (p._id !== postId) return p;
+      const alreadySaved = p.savedBy?.includes(currentUser?.uid);
+      return {
+        ...p,
+        savedBy: alreadySaved
+          ? p.savedBy.filter(id => id !== currentUser?.uid)
+          : [...(p.savedBy || []), currentUser?.uid],
+      };
+    }));
+    await toggleSavePost(postId);
   };
 
   const timeAgo = (date) => {
@@ -330,7 +345,16 @@ function Home() {
                     </span>
                   </button>
                   <div style={{ flex: 1 }} />
-                  <FiBookmark style={{ color: colors.textSecondary, fontSize: '20px', cursor: 'pointer' }} />
+                  <button
+                    onClick={() => handleSave(post._id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+                  >
+                    {post.savedBy?.includes(currentUser?.uid) ? (
+                      <BsBookmarkFill style={{ color: '#6C63FF', fontSize: '19px' }} />
+                    ) : (
+                      <BsBookmark style={{ color: colors.textSecondary, fontSize: '19px' }} />
+                    )}
+                  </button>
                 </div>
 
                 {/* Caption */}

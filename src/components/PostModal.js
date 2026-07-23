@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   getSinglePost, deletePost, editPostCaption, toggleLikePost, getComments, addComment,
-  getConversations, getOrCreateConversation, sendMessageWithMedia
+  getConversations, getOrCreateConversation, sendMessageWithMedia, toggleSavePost
 } from '../services/apiService';
 import {
   IoClose, IoTrash, IoShareSocial, IoDownload, IoCreate,
@@ -17,6 +17,7 @@ import { HiDotsHorizontal } from 'react-icons/hi';
 import { BsChatDotsFill } from 'react-icons/bs';
 import { MdVerified } from 'react-icons/md';
 import { FiHeart, FiMessageCircle } from 'react-icons/fi';
+import { BsBookmark, BsBookmarkFill } from 'react-icons/bs';
 import { FaHeart } from 'react-icons/fa';
 
 function PostModal({ postId, onClose, onDeleted }) {
@@ -113,6 +114,18 @@ function PostModal({ postId, onClose, onDeleted }) {
         : [...(prev.likedBy || []), currentUser?.uid],
     }));
     await toggleLikePost(postId);
+  };
+  const isSaved = post?.savedBy?.includes(currentUser?.uid);
+
+  const handleSave = async () => {
+    if (!post) return;
+    setPost((prev) => ({
+      ...prev,
+      savedBy: isSaved
+        ? prev.savedBy.filter((id) => id !== currentUser?.uid)
+        : [...(prev.savedBy || []), currentUser?.uid],
+    }));
+    await toggleSavePost(postId);
   };
 
   const handleDelete = async () => {
@@ -503,6 +516,16 @@ function PostModal({ postId, onClose, onDeleted }) {
 
                   <div style={{ flex: 1 }} />
 
+                  <button onClick={handleSave} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center',
+                  }}>
+                    {isSaved ? (
+                      <BsBookmarkFill style={{ color: '#6C63FF', fontSize: '18px' }} />
+                    ) : (
+                      <BsBookmark style={{ color: colors.textSecondary, fontSize: '18px' }} />
+                    )}
+                  </button>
                   <button onClick={handleDownload} style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     color: colors.textSecondary, fontSize: '20px', display: 'flex', alignItems: 'center',

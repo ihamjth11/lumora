@@ -228,23 +228,43 @@ function Profile() {
       {/* Interests */}
       {interests.length > 0 ? (
         <div style={{ padding: '0 18px 18px', position: 'relative', zIndex: 1 }}>
-          <h3 style={{ fontSize: '13px', fontWeight: '800', color: colors.textPrimary, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Interests
-          </h3>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {interests.map((item, i) => (
-              <span key={i} style={{
-                background: isDark ? 'rgba(108,99,255,0.1)' : '#6C63FF12',
-                border: '1px solid #6C63FF30',
-                color: '#6C63FF',
-                padding: '7px 15px', borderRadius: '20px',
-                fontSize: '13px', fontWeight: '700',
-                display: 'flex', alignItems: 'center', gap: '5px',
+          <div style={{
+            background: colors.bgCard,
+            border: `1px solid ${colors.border}`,
+            borderRadius: '22px', padding: '18px',
+            boxShadow: colors.shadow,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px' }}>
+              <HiSparkles style={{ color: '#6C63FF', fontSize: '14px' }} />
+              <h3 style={{
+                fontSize: '12px', fontWeight: '800',
+                background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                textTransform: 'uppercase', letterSpacing: '0.8px',
               }}>
-                <HiSparkles style={{ fontSize: '12px' }} />
-                {item}
-              </span>
-            ))}
+                Interests
+              </h3>
+            </div>
+            <div style={{ display: 'flex', gap: '9px', flexWrap: 'wrap' }}>
+              {interests.map((item, i) => {
+                const paletteColors = ['#6C63FF', '#F72585', '#00B4D8', '#10b981', '#f59e0b', '#a855f7'];
+                const tagColor = paletteColors[i % paletteColors.length];
+                return (
+                  <span key={i} style={{
+                    background: isDark ? `${tagColor}18` : `${tagColor}12`,
+                    border: `1px solid ${tagColor}35`,
+                    color: tagColor,
+                    padding: '8px 16px', borderRadius: '20px',
+                    fontSize: '13px', fontWeight: '700',
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    boxShadow: `0 2px 8px ${tagColor}15`,
+                    transition: 'transform 0.15s',
+                  }}>
+                    {item}
+                  </span>
+                );
+              })}
+            </div>
           </div>
         </div>
       ) : null}

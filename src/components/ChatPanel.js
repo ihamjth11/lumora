@@ -4,8 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { getProfileByUsername, getOrCreateConversation, getMessages, sendMessageWithMedia, uploadChatMedia } from '../services/apiService';
 import { IoArrowBack, IoSend, IoClose, IoMic, IoStop } from 'react-icons/io5';
 import { HiOutlinePhotograph, HiOutlineCamera, HiOutlineFilm } from 'react-icons/hi';
+import { HiSparkles } from 'react-icons/hi';
 import { MdVerified } from 'react-icons/md';
 import { FiPlus } from 'react-icons/fi';
+import PostModal from './PostModal';
 
 function ChatPanel({ username, onBack, showBackButton }) {
   const { colors, isDark } = useTheme();
@@ -22,6 +24,7 @@ function ChatPanel({ username, onBack, showBackButton }) {
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
+  const [viewingPostId, setViewingPostId] = useState(null);
 
   const bottomRef = useRef(null);
   const pollRef = useRef(null);
@@ -149,7 +152,6 @@ function ChatPanel({ username, onBack, showBackButton }) {
   const accentColor = '#6C63FF';
   const inputBg = colors.inputBg || colors.bgCard;
 
-  // Theme-aware glass tones (used instead of hardcoded dark values)
   const glassBg = isDark ? 'rgba(20,16,42,0.7)' : 'rgba(255,255,255,0.75)';
   const glassBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.12)';
   const chipBg = isDark ? 'rgba(255,255,255,0.06)' : '#f0efff';
@@ -289,6 +291,54 @@ function ChatPanel({ username, onBack, showBackButton }) {
                   </div>
                 )}
                 <div style={{ maxWidth: '340px' }}>
+                  {msg.mediaType === 'post' && msg.sharedPost && (
+                    <div
+                      onClick={() => setViewingPostId(msg.sharedPost._id)}
+                      style={{
+                        width: '220px', borderRadius: '18px', overflow: 'hidden',
+                        border: `1px solid ${otherBubbleBorder}`,
+                        background: otherBubbleBg, cursor: 'pointer',
+                        marginBottom: msg.text ? '4px' : 0,
+                      }}
+                    >
+                      <div style={{ width: '100%', height: '150px', background: '#000', position: 'relative' }}>
+                        {msg.sharedPost.mediaType === 'video' ? (
+                          <video src={msg.sharedPost.mediaUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <img src={msg.sharedPost.mediaUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        )}
+                        <div style={{
+                          position: 'absolute', top: '8px', left: '8px',
+                          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)',
+                          borderRadius: '8px', padding: '3px 8px',
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                        }}>
+                          <HiSparkles style={{ color: '#fff', fontSize: '10px' }} />
+                          <span style={{ color: '#fff', fontSize: '9px', fontWeight: '700' }}>Post</span>
+                        </div>
+                      </div>
+                      <div style={{ padding: '10px 12px' }}>
+                        {msg.sharedPost.caption ? (
+                          <p style={{
+                            fontSize: '12px', color: otherBubbleText, lineHeight: '1.4',
+                            overflow: 'hidden', textOverflow: 'ellipsis',
+                            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                            marginBottom: '8px',
+                          }}>
+                            {msg.sharedPost.caption}
+                          </p>
+                        ) : null}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          gap: '6px', padding: '7px', borderRadius: '10px',
+                          background: 'linear-gradient(135deg, #6C63FF15, #F7258510)',
+                          border: '1px solid #6C63FF30',
+                        }}>
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#6C63FF' }}>View Post</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {msg.mediaType === 'image' && (
                     <img src={msg.mediaUrl} alt="" style={{
                       width: '100%', borderRadius: '16px', display: 'block', marginBottom: msg.text ? '4px' : 0,
@@ -481,6 +531,13 @@ function ChatPanel({ username, onBack, showBackButton }) {
           </>
         )}
       </div>
+
+      {viewingPostId && (
+        <PostModal
+          postId={viewingPostId}
+          onClose={() => setViewingPostId(null)}
+        />
+      )}
     </div>
   );
 }

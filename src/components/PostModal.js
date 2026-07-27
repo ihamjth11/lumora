@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   getSinglePost, deletePost, editPostCaption, toggleLikePost, getComments, addComment,
-  getConversations, getOrCreateConversation, sendMessageWithMedia, toggleSavePost
+  getConversations, getOrCreateConversation, sendMessageWithMedia, toggleSavePost, sendSharedPost
 } from '../services/apiService';
 import {
   IoClose, IoTrash, IoShareSocial, IoDownload, IoCreate,
@@ -19,6 +19,7 @@ import { MdVerified } from 'react-icons/md';
 import { FiHeart, FiMessageCircle } from 'react-icons/fi';
 import { BsBookmark, BsBookmarkFill } from 'react-icons/bs';
 import { FaHeart } from 'react-icons/fa';
+
 
 function PostModal({ postId, onClose, onDeleted }) {
   const { colors } = useTheme();
@@ -205,11 +206,11 @@ function PostModal({ postId, onClose, onDeleted }) {
     }
   };
 
-  const handleShareToUser = async (user) => {
+ const handleShareToUser = async (user) => {
     if (sentToUsers.includes(user._id)) return;
     const convRes = await getOrCreateConversation(user.firebaseUid);
     if (convRes.success) {
-      await sendMessageWithMedia(convRes.conversationId, `Check out this post: ${postUrl}`, '', 'none');
+      await sendSharedPost(convRes.conversationId, postId);
       setSentToUsers((prev) => [...prev, user._id]);
     }
   };

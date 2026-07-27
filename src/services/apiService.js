@@ -519,3 +519,22 @@ export const getLikedPosts = async () => {
     return { success: false, error: error.message };
   }
 };
+// ---------- SEND SHARED POST TO CHAT (Protected) ----------
+export const sendSharedPost = async (conversationId, postId) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/${conversationId}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ sharedPostId: postId }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, message: data.message };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

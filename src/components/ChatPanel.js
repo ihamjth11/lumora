@@ -3,7 +3,7 @@ import { useTheme } from '../ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { getProfileByUsername, getOrCreateConversation, getMessages, sendMessageWithMedia, uploadChatMedia } from '../services/apiService';
 import { IoArrowBack, IoSend, IoClose, IoMic, IoStop } from 'react-icons/io5';
-import { HiOutlinePhotograph, HiOutlineCamera } from 'react-icons/hi';
+import { HiOutlinePhotograph, HiOutlineCamera, HiOutlineFilm } from 'react-icons/hi';
 import { MdVerified } from 'react-icons/md';
 import { FiPlus } from 'react-icons/fi';
 
@@ -26,6 +26,7 @@ function ChatPanel({ username, onBack, showBackButton }) {
   const bottomRef = useRef(null);
   const pollRef = useRef(null);
   const photoInputRef = useRef(null);
+  const videoInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -145,7 +146,17 @@ function ChatPanel({ username, onBack, showBackButton }) {
   const formatTime = (date) => new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const formatRecordTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
+  const accentColor = '#6C63FF';
   const inputBg = colors.inputBg || colors.bgCard;
+
+  // Theme-aware glass tones (used instead of hardcoded dark values)
+  const glassBg = isDark ? 'rgba(20,16,42,0.7)' : 'rgba(255,255,255,0.75)';
+  const glassBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(108,99,255,0.12)';
+  const chipBg = isDark ? 'rgba(255,255,255,0.06)' : '#f0efff';
+  const chipBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(108,99,255,0.15)';
+  const otherBubbleBg = isDark ? 'rgba(255,255,255,0.06)' : '#f3f2ff';
+  const otherBubbleBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(108,99,255,0.1)';
+  const otherBubbleText = colors.textPrimary;
 
   if (!username) {
     return (
@@ -192,24 +203,24 @@ function ChatPanel({ username, onBack, showBackButton }) {
 
   const photoURL = otherUser.photoURL || '';
   const avatar = otherUser.avatar || '🧑‍💻';
-  const accentColor = '#6C63FF';
-  const bubbleColorOther = colors.bgCard;
 
   return (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column',
-      background: 'linear-gradient(165deg, #0b0b18 0%, #14102a 45%, #0b0b18 100%)',
+      background: isDark
+        ? 'linear-gradient(165deg, #0b0b18 0%, #14102a 45%, #0b0b18 100%)'
+        : 'linear-gradient(165deg, #fafaff 0%, #f3f0ff 45%, #fafaff 100%)',
       minWidth: 0, height: '100%',
       fontFamily: 'Inter, sans-serif', position: 'relative', overflow: 'hidden',
     }}>
       <div style={{
         position: 'absolute', top: '-10%', right: '-10%', width: '300px', height: '300px',
-        borderRadius: '50%', background: 'radial-gradient(circle, rgba(108,99,255,0.15) 0%, transparent 70%)',
+        borderRadius: '50%', background: `radial-gradient(circle, rgba(108,99,255,${isDark ? 0.15 : 0.08}) 0%, transparent 70%)`,
         pointerEvents: 'none',
       }} />
       <div style={{
         position: 'absolute', bottom: '10%', left: '-8%', width: '250px', height: '250px',
-        borderRadius: '50%', background: 'radial-gradient(circle, rgba(247,37,133,0.12) 0%, transparent 70%)',
+        borderRadius: '50%', background: `radial-gradient(circle, rgba(247,37,133,${isDark ? 0.12 : 0.06}) 0%, transparent 70%)`,
         pointerEvents: 'none',
       }} />
       <style>{`
@@ -218,17 +229,17 @@ function ChatPanel({ username, onBack, showBackButton }) {
         @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
       `}</style>
 
-     {/* Header */}
+      {/* Header */}
       <div style={{
-        background: 'rgba(20,16,42,0.7)', backdropFilter: 'blur(20px) saturate(180%)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        background: glassBg, backdropFilter: 'blur(20px) saturate(180%)',
+        borderBottom: `1px solid ${glassBorder}`,
         padding: '14px 16px', display: 'flex', alignItems: 'center',
         gap: '12px', flexShrink: 0, position: 'relative', zIndex: 2,
       }}>
         {showBackButton && (
           <button onClick={onBack} style={{
-            background: 'rgba(255,255,255,0.06)', border: 'none', width: '36px', height: '36px',
-            borderRadius: '12px', color: '#fff', fontSize: '18px', cursor: 'pointer',
+            background: chipBg, border: 'none', width: '36px', height: '36px',
+            borderRadius: '12px', color: colors.textPrimary, fontSize: '18px', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
             <IoArrowBack />
@@ -239,24 +250,24 @@ function ChatPanel({ username, onBack, showBackButton }) {
           background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
           backgroundSize: 'cover', backgroundPosition: 'center',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+          boxShadow: '0 4px 14px rgba(108,99,255,0.3)',
         }}>
           {!photoURL && avatar}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '14px', fontWeight: '700', color: '#fff' }}>{otherUser.name}</span>
+            <span style={{ fontSize: '14px', fontWeight: '700', color: colors.textPrimary }}>{otherUser.name}</span>
             <MdVerified style={{ color: accentColor, fontSize: '13px' }} />
           </div>
-          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>@{otherUser.username}</span>
+          <span style={{ fontSize: '11px', color: colors.textMuted }}>@{otherUser.username}</span>
         </div>
       </div>
 
       {/* Messages */}
-      {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative', zIndex: 2 }}>
         {messages.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>Say hi to {otherUser.name}! 👋</p>
+            <p style={{ fontSize: '13px', color: colors.textMuted }}>Say hi to {otherUser.name}! 👋</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -290,8 +301,8 @@ function ChatPanel({ username, onBack, showBackButton }) {
                   )}
                   {msg.mediaType === 'audio' && (
                     <div style={{
-                      background: mine ? 'linear-gradient(135deg, #6C63FF, #a855f7)' : bubbleColorOther,
-                      border: mine ? 'none' : `1px solid ${colors.border}`,
+                      background: mine ? 'linear-gradient(135deg, #6C63FF, #a855f7)' : otherBubbleBg,
+                      border: mine ? 'none' : `1px solid ${otherBubbleBorder}`,
                       borderRadius: '18px', padding: '10px 14px', marginBottom: msg.text ? '4px' : 0,
                     }}>
                       <audio src={msg.mediaUrl} controls style={{ width: '220px', height: '32px' }} />
@@ -299,16 +310,18 @@ function ChatPanel({ username, onBack, showBackButton }) {
                   )}
                   {msg.text && (
                     <div style={{
-                      background: mine ? 'linear-gradient(135deg, #6C63FF, #a855f7)' : 'rgba(255,255,255,0.06)',
-                      border: mine ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                      background: mine ? 'linear-gradient(135deg, #6C63FF, #a855f7)' : otherBubbleBg,
+                      border: mine ? 'none' : `1px solid ${otherBubbleBorder}`,
                       borderRadius: mine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                       padding: '10px 14px',
                       boxShadow: mine ? '0 2px 16px rgba(108,99,255,0.4)' : 'none',
                     }}>
-                      <p style={{ fontSize: '14px', color: '#fff', lineHeight: '1.4', wordBreak: 'break-word' }}>{msg.text}</p>
+                      <p style={{ fontSize: '14px', color: mine ? '#fff' : otherBubbleText, lineHeight: '1.4', wordBreak: 'break-word' }}>{msg.text}</p>
                     </div>
                   )}
-                  <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', marginTop: '4px', textAlign: mine ? 'right' : 'left' }}></p>
+                  <p style={{ fontSize: '10px', color: colors.textMuted, marginTop: '4px', textAlign: mine ? 'right' : 'left' }}>
+                    {formatTime(msg.createdAt)}
+                  </p>
                 </div>
               </div>
             );
@@ -356,10 +369,12 @@ function ChatPanel({ username, onBack, showBackButton }) {
           display: 'flex', gap: '10px',
         }}>
           <input type="file" accept="image/*" ref={photoInputRef} onChange={(e) => handlePickFile(e, 'image')} style={{ display: 'none' }} />
+          <input type="file" accept="video/*" ref={videoInputRef} onChange={(e) => handlePickFile(e, 'video')} style={{ display: 'none' }} />
           <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={(e) => handlePickFile(e, 'image')} style={{ display: 'none' }} />
 
           {[
             { icon: <HiOutlinePhotograph />, label: 'Gallery', onClick: () => photoInputRef.current?.click(), color: '#6C63FF' },
+            { icon: <HiOutlineFilm />, label: 'Video', onClick: () => videoInputRef.current?.click(), color: '#a855f7' },
             { icon: <HiOutlineCamera />, label: 'Camera', onClick: () => cameraInputRef.current?.click(), color: '#F72585' },
           ].map((item, i) => (
             <button key={i} onClick={item.onClick} style={{
@@ -375,11 +390,10 @@ function ChatPanel({ username, onBack, showBackButton }) {
         </div>
       )}
 
-      
       {/* Input Bar */}
       <div style={{
-        background: 'rgba(20,16,42,0.7)', backdropFilter: 'blur(20px) saturate(180%)',
-        borderTop: '1px solid rgba(255,255,255,0.08)',
+        background: glassBg, backdropFilter: 'blur(20px) saturate(180%)',
+        borderTop: `1px solid ${glassBorder}`,
         padding: '12px 16px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px',
         position: 'relative', zIndex: 2,
       }}>
@@ -411,10 +425,10 @@ function ChatPanel({ username, onBack, showBackButton }) {
               onClick={() => setShowAttachMenu(!showAttachMenu)}
               style={{
                 width: '40px', height: '40px', borderRadius: '14px', flexShrink: 0,
-                background: showAttachMenu ? 'linear-gradient(135deg, #6C63FF, #F72585)' : 'rgba(255,255,255,0.06)',
-                border: showAttachMenu ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                background: showAttachMenu ? 'linear-gradient(135deg, #6C63FF, #F72585)' : chipBg,
+                border: showAttachMenu ? 'none' : `1px solid ${chipBorder}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: '18px', cursor: 'pointer',
+                color: showAttachMenu ? '#fff' : colors.textPrimary, fontSize: '18px', cursor: 'pointer',
                 transform: showAttachMenu ? 'rotate(45deg)' : 'none',
                 transition: 'transform 0.2s',
               }}>
@@ -423,8 +437,8 @@ function ChatPanel({ username, onBack, showBackButton }) {
 
             <div style={{
               flex: 1, display: 'flex', alignItems: 'center',
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: inputBg,
+              border: `1px solid ${colors.border}`,
               borderRadius: '24px', padding: '10px 16px', gap: '8px',
             }}>
               <input
@@ -435,7 +449,7 @@ function ChatPanel({ username, onBack, showBackButton }) {
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 style={{
                   flex: 1, background: 'none', border: 'none', outline: 'none',
-                  color: '#fff', fontSize: '14px', fontFamily: 'Inter',
+                  color: colors.textPrimary, fontSize: '14px', fontFamily: 'Inter',
                 }}
               />
             </div>
@@ -456,10 +470,10 @@ function ChatPanel({ username, onBack, showBackButton }) {
               </button>
             ) : (
               <button onClick={startRecording} style={{
-                width: '42px', height: '42px', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0,
-                background: 'rgba(255,255,255,0.06)',
+                width: '42px', height: '42px', borderRadius: '50%', border: `1px solid ${chipBorder}`, flexShrink: 0,
+                background: chipBg,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: '#fff', fontSize: '18px',
+                cursor: 'pointer', color: colors.textPrimary, fontSize: '18px',
               }}>
                 <IoMic />
               </button>

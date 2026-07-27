@@ -504,3 +504,18 @@ export const getSavedPosts = async () => {
     return { success: false, error: error.message };
   }
 };
+
+// ---------- GET MY LIKED POSTS (Protected) ----------
+export const getLikedPosts = async () => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/posts/liked/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, posts: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

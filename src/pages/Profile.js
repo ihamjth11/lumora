@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getUserPosts, deletePost } from '../services/apiService';
+import { getUserPosts, deletePost, getSavedPosts, getLikedPosts } from '../services/apiService';
 import PostModal from '../components/PostModal';
 import { RiSettings4Line } from 'react-icons/ri';
 import { MdVerified } from 'react-icons/md';
@@ -16,6 +16,12 @@ function Profile() {
   const [activeTab, setActiveTab] = useState('posts');
   const [myPosts, setMyPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
+  const [savedPosts, setSavedPosts] = useState([]);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [savedLoaded, setSavedLoaded] = useState(false);
+  const [likedPosts, setLikedPosts] = useState([]);
+  const [loadingLiked, setLoadingLiked] = useState(false);
+  const [likedLoaded, setLikedLoaded] = useState(false);
   const [activePostId, setActivePostId] = useState(null);
 
   const displayName = userProfile?.name || 'User';
@@ -37,6 +43,15 @@ function Profile() {
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    if (activeTab === 'saved' && !savedLoaded && currentUser?.uid) {
+      loadSavedPosts();
+    }
+    if (activeTab === 'liked' && !likedLoaded && currentUser?.uid) {
+      loadLikedPosts();
+    }
+  }, [activeTab, currentUser]);
+
   const loadMyPosts = async () => {
     setLoadingPosts(true);
     const res = await getUserPosts(currentUser.uid);
@@ -45,6 +60,72 @@ function Profile() {
     }
     setLoadingPosts(false);
   };
+
+  const loadSavedPosts = async () => {
+    setLoadingSaved(true);
+    const res = await getSavedPosts();
+    if (res.success) {
+      setSavedPosts(res.posts);
+    }
+    setSavedLoaded(true);
+    setLoadingSaved(false);
+  };
+
+  const loadLikedPosts = async () => {
+    setLoadingLiked(true);
+    const res = await getLikedPosts();
+    if (res.success) {
+      setLikedPosts(res.posts);
+    }
+    setLikedLoaded(true);
+    setLoadingLiked(false);
+  };
+
+  const renderPostGrid = (posts) => (
+    <div style={{
+      display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px',
+    }}>
+      {posts.map((post) => (
+        <div
+          key={post._id}
+          onClick={() => setActivePostId(post._id)}
+          style={{
+            position: 'relative', aspectRatio: '1',
+            background: '#000', overflow: 'hidden', cursor: 'pointer',
+          }}
+        >
+          {post.mediaType === 'video' ? (
+            <>
+              <video src={post.mediaUrl} style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+              }} />
+              <FiPlay style={{
+                position: 'absolute', top: '6px', right: '6px',
+                color: '#fff', fontSize: '16px',
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
+              }} />
+            </>
+          ) : (
+            <img src={post.mediaUrl} alt="post" style={{
+              width: '100%', height: '100%', objectFit: 'cover',
+            }} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderSpinner = () => (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '50px 0' }}>
+      <div style={{
+        width: '28px', height: '28px', borderRadius: '50%',
+        border: '3px solid rgba(108,99,255,0.2)',
+        borderTop: '3px solid #6C63FF',
+        animation: 'spin 0.8s linear infinite',
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
   return (
     <div style={{
@@ -296,18 +377,17 @@ function Profile() {
         ))}
       </div>
 
-      <div style={{ padding: activeTab === 'posts' && myPosts.length > 0 ? '4px' : '0 18px', position: 'relative', zIndex: 1 }}>
+      <div style={{
+        padding: (
+          (activeTab === 'posts' && myPosts.length > 0) ||
+          (activeTab === 'saved' && savedPosts.length > 0) ||
+          (activeTab === 'liked' && likedPosts.length > 0)
+        ) ? '4px' : '0 18px',
+        position: 'relative', zIndex: 1
+      }}>
         {activeTab === 'posts' ? (
           loadingPosts ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '50px 0' }}>
-              <div style={{
-                width: '28px', height: '28px', borderRadius: '50%',
-                border: '3px solid rgba(108,99,255,0.2)',
-                borderTop: '3px solid #6C63FF',
-                animation: 'spin 0.8s linear infinite',
-              }} />
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            </div>
+            renderSpinner()
           ) : myPosts.length === 0 ? (
             <div style={{
               display: 'flex', flexDirection: 'column',
@@ -334,69 +414,45 @@ function Profile() {
                 Share your first learning post! ✨
               </p>
             </div>
-          ) : (
-            <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px',
-            }}>
-              {myPosts.map((post) => (
-                <div
-                  key={post._id}
-                  onClick={() => setActivePostId(post._id)}
-                  style={{
-                    position: 'relative', aspectRatio: '1',
-                    background: '#000', overflow: 'hidden', cursor: 'pointer',
-                  }}
-                >
-                  {post.mediaType === 'video' ? (
-                    <>
-                      <video src={post.mediaUrl} style={{
-                        width: '100%', height: '100%', objectFit: 'cover',
-                      }} />
-                      <FiPlay style={{
-                        position: 'absolute', top: '6px', right: '6px',
-                        color: '#fff', fontSize: '16px',
-                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.6))',
-                      }} />
-                    </>
-                  ) : (
-                    <img src={post.mediaUrl} alt="post" style={{
-                      width: '100%', height: '100%', objectFit: 'cover',
-                    }} />
-                  )}
-                </div>
-              ))}
-            </div>
-          )
+          ) : renderPostGrid(myPosts)
         ) : null}
 
         {activeTab === 'saved' ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', padding: '50px 24px', textAlign: 'center',
-          }}>
-            <FiBookmark style={{ fontSize: '48px', color: colors.border, marginBottom: '16px' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: colors.textPrimary, marginBottom: '8px' }}>
-              Nothing saved yet
-            </h3>
-            <p style={{ fontSize: '14px', color: colors.textMuted }}>
-              Bookmark posts to find them here ✨
-            </p>
-          </div>
+          loadingSaved ? (
+            renderSpinner()
+          ) : savedPosts.length === 0 ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', padding: '50px 24px', textAlign: 'center',
+            }}>
+              <FiBookmark style={{ fontSize: '48px', color: colors.border, marginBottom: '16px' }} />
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: colors.textPrimary, marginBottom: '8px' }}>
+                Nothing saved yet
+              </h3>
+              <p style={{ fontSize: '14px', color: colors.textMuted }}>
+                Bookmark posts to find them here ✨
+              </p>
+            </div>
+          ) : renderPostGrid(savedPosts)
         ) : null}
 
         {activeTab === 'liked' ? (
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', padding: '50px 24px', textAlign: 'center',
-          }}>
-            <FiHeart style={{ fontSize: '48px', color: colors.border, marginBottom: '16px' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: colors.textPrimary, marginBottom: '8px' }}>
-              No liked posts yet
-            </h3>
-            <p style={{ fontSize: '14px', color: colors.textMuted }}>
-              Like posts to see them here ✨
-            </p>
-          </div>
+          loadingLiked ? (
+            renderSpinner()
+          ) : likedPosts.length === 0 ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', padding: '50px 24px', textAlign: 'center',
+            }}>
+              <FiHeart style={{ fontSize: '48px', color: colors.border, marginBottom: '16px' }} />
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: colors.textPrimary, marginBottom: '8px' }}>
+                No liked posts yet
+              </h3>
+              <p style={{ fontSize: '14px', color: colors.textMuted }}>
+                Like posts to see them here ✨
+              </p>
+            </div>
+          ) : renderPostGrid(likedPosts)
         ) : null}
       </div>
 
@@ -406,6 +462,8 @@ function Profile() {
           onClose={() => setActivePostId(null)}
           onDeleted={(deletedId) => {
             setMyPosts((prev) => prev.filter((p) => p._id !== deletedId));
+            setSavedPosts((prev) => prev.filter((p) => p._id !== deletedId));
+            setLikedPosts((prev) => prev.filter((p) => p._id !== deletedId));
           }}
         />
       )}

@@ -538,3 +538,85 @@ export const sendSharedPost = async (conversationId, postId) => {
     return { success: false, error: error.message };
   }
 };
+// ---------- BLOCK / UNBLOCK USER (Protected) ----------
+export const toggleBlockUser = async (targetUid) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/users/block/${targetUid}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, blocked: data.blocked };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- GET MY BLOCKED USERS (Protected) ----------
+export const getBlockedUsersList = async () => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/users/blocked/list`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, users: data };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- DELETE MESSAGE (for me or for everyone) (Protected) ----------
+export const deleteMessage = async (messageId, forEveryone) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/message/${messageId}?forEveryone=${forEveryone ? "true" : "false"}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, deletedForEveryone: data.deletedForEveryone };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- CLEAR / DELETE ENTIRE CHAT (Protected) ----------
+export const clearChat = async (conversationId) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/${conversationId}/clear`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- REPORT USER / MESSAGE (Protected) ----------
+export const reportUserOrMessage = async (reportedFirebaseUid, targetType, targetId, reason) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/report`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ reportedFirebaseUid, targetType, targetId, reason }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import Cropper from 'react-easy-crop';
+import EmojiPicker from 'emoji-picker-react';
 import { useTheme } from '../ThemeContext';
 import { IoClose, IoCheckmark, IoTrash } from 'react-icons/io5';
 import { MdCrop, MdTune, MdFilterVintage, MdTextFields, MdEmojiEmotions } from 'react-icons/md';
@@ -22,8 +23,11 @@ const FILTERS = [
   { name: 'Noir', css: 'grayscale(1) contrast(1.3) brightness(0.9)' },
 ];
 
-const TEXT_COLORS = ['#ffffff', '#000000', '#ef4444', '#f59e0b', '#10b981', '#6C63FF', '#F72585', '#fbbf24'];
-const STICKERS = ['❤️', '🔥', '✨', '😂', '😍', '👍', '🎉', '💯', '🙌', '⭐', '💜', '🌟', '😎', '🥳', '👏', '💪'];
+const TEXT_SWATCHES = [
+  '#ffffff', '#000000', '#ef4444', '#f97316', '#f59e0b', '#eab308',
+  '#84cc16', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+  '#6C63FF', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#F72585',
+];
 
 function createImage(url) {
   return new Promise((resolve, reject) => {
@@ -58,7 +62,6 @@ async function getEditedImage(imageSrc, pixelCrop, filterCss, brightness, contra
     ctx.drawImage(image, 0, 0);
   }
 
-  // Reset filter before drawing overlays so they aren't affected by photo filter
   ctx.filter = 'none';
 
   overlays.forEach((ov) => {
@@ -70,7 +73,7 @@ async function getEditedImage(imageSrc, pixelCrop, filterCss, brightness, contra
     ctx.scale(ov.scale || 1, ov.scale || 1);
 
     if (ov.type === 'text') {
-      const fontSize = Math.round(cropW * 0.06);
+      const fontSize = Math.round(cropW * (ov.fontSizePct || 6) / 100);
       ctx.font = `800 ${fontSize}px Inter, sans-serif`;
       ctx.fillStyle = ov.color;
       ctx.textAlign = 'center';
@@ -94,8 +97,7 @@ async function getEditedImage(imageSrc, pixelCrop, filterCss, brightness, contra
 }
 
 function ImageEditor({ imageSrc, onCancel, onConfirm }) {
-  const { isDark } = useTheme();
-  const [tab, setTab] = useState('crop'); // crop | filter | adjust | text | stickers
+  const [tab, setTab] = useState('crop');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [aspect, setAspect] = useState(4 / 5);
@@ -106,11 +108,13 @@ function ImageEditor({ imageSrc, onCancel, onConfirm }) {
   const [saturation, setSaturation] = useState(1);
   const [processing, setProcessing] = useState(false);
 
-  const [overlays, setOverlays] = useState([]); // { id, type, content, xPct, yPct, scale, rotation, color }
+  const [overlays, setOverlays] = useState([]); // { id, type, content, xPct, yPct, scale, rotation, color, fontSizePct }
   const [activeOverlayId, setActiveOverlayId] = useState(null);
   const [textDraft, setTextDraft] = useState('');
   const [textColor, setTextColor] = useState('#ffffff');
-  const dragRef = useRef(null); // { id, startX, startY, startXPct, startYPct }
+  const [textSizePct, setTextSizePct] = useState(6);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const dragRef = useRef(null);
   const stageRef = useRef(null);
 
   const onCropComplete = useCallback((_, pixels) => {
@@ -120,11 +124,14 @@ function ImageEditor({ imageSrc, onCancel, onConfirm }) {
   const activeFilterCss = FILTERS.find((f) => f.name === selectedFilter)?.css || 'none';
   const previewFilter = `${activeFilterCss === 'none' ? '' : activeFilterCss} brightness(${brightness}) contrast(${contrast}) saturate(${saturation})`.trim();
 
+  const activeOverlay = overlays.find((o) => o.id === activeOverlayId);
+
   const addTextOverlay = () => {
     if (!textDraft.trim()) return;
     const id = Date.now().toString();
     setOverlays((prev) => [...prev, {
-      id, type: 'text', content: textDraft.trim(), xPct: 50, yPct: 50, scale: 1, rotation: 0, color: textColor,
+      id, type: 'text', content: textDraft.trim(), xPct: 50, yPct: 50, scale: 1, rotation: 0,
+      color: textColor, fontSizePct: textSizePct,
     }]);
     setTextDraft('');
     setActiveOverlayId(id);
@@ -136,6 +143,7 @@ function ImageEditor({ imageSrc, onCancel, onConfirm }) {
       id, type: 'sticker', content: emoji, xPct: 50, yPct: 50, scale: 1, rotation: 0,
     }]);
     setActiveOverlayId(id);
+    setShowEmojiPicker(false);
   };
 
   const removeActiveOverlay = () => {
@@ -143,14 +151,16 @@ function ImageEditor({ imageSrc, onCancel, onConfirm }) {
     setActiveOverlayId(null);
   };
 
+  const updateActiveOverlay = (patch) => {
+    setOverlays((prev) => prev.map((o) => o.id === activeOverlayId ? { ...o, ...patch } : o));
+  };
+
   const handlePointerDown = (e, ov) => {
     e.stopPropagation();
     setActiveOverlayId(ov.id);
+    if (ov.type === 'text') { setTextColor(ov.color); setTextSizePct(ov.fontSizePct || 6); }
     const stage = stageRef.current.getBoundingClientRect();
-    dragRef.current = {
-      id: ov.id,
-      stageW: stage.width, stageH: stage.height, stageLeft: stage.left, stageTop: stage.top,
-    };
+    dragRef.current = { id: ov.id, stageW: stage.width, stageH: stage.height, stageLeft: stage.left, stageTop: stage.top };
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
   };
@@ -274,7 +284,7 @@ function ImageEditor({ imageSrc, onCancel, onConfirm }) {
               >
                 {ov.type === 'text' ? (
                   <span style={{
-                    fontSize: '28px', fontWeight: '800', color: ov.color,
+                    fontSize: `${(ov.fontSizePct || 6) * 4.6}px`, fontWeight: '800', color: ov.color,
                     textShadow: '0 2px 6px rgba(0,0,0,0.5)', whiteSpace: 'nowrap',
                   }}>
                     {ov.content}
@@ -291,7 +301,7 @@ function ImageEditor({ imageSrc, onCancel, onConfirm }) {
       {/* Bottom controls */}
       <div style={{
         background: 'rgba(10,10,18,0.95)', backdropFilter: 'blur(20px)',
-        flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)',
+        flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)', maxHeight: '46vh', overflowY: 'auto',
       }}>
         {tab === 'crop' && (
           <div style={{ display: 'flex', gap: '8px', padding: '14px 16px', overflowX: 'auto' }}>
@@ -356,7 +366,7 @@ function ImageEditor({ imageSrc, onCancel, onConfirm }) {
         )}
 
         {tab === 'text' && (
-          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
               <input
                 type="text"
@@ -376,41 +386,92 @@ function ImageEditor({ imageSrc, onCancel, onConfirm }) {
                 Add
               </button>
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {TEXT_COLORS.map((c) => (
-                <div key={c} onClick={() => setTextColor(c)} style={{
-                  width: '26px', height: '26px', borderRadius: '50%', background: c,
+
+            {/* Size slider */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '12px', color: '#fff', fontWeight: '600' }}>Text Size</span>
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>{textSizePct}</span>
+              </div>
+              <input
+                type="range" min={2} max={16} step={0.5}
+                value={textSizePct}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  setTextSizePct(v);
+                  if (activeOverlay?.type === 'text') updateActiveOverlay({ fontSizePct: v });
+                }}
+                style={{ width: '100%', accentColor: '#a855f7' }}
+              />
+            </div>
+
+            {/* Color swatches */}
+            <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {TEXT_SWATCHES.map((c) => (
+                <div key={c} onClick={() => {
+                  setTextColor(c);
+                  if (activeOverlay?.type === 'text') updateActiveOverlay({ color: c });
+                }} style={{
+                  width: '27px', height: '27px', borderRadius: '50%', background: c,
                   border: textColor === c ? '2px solid #a855f7' : '2px solid rgba(255,255,255,0.2)',
+                  boxShadow: textColor === c ? '0 0 0 2px rgba(168,85,247,0.3)' : 'none',
                   cursor: 'pointer', flexShrink: 0,
                 }} />
               ))}
+              {/* Full custom color picker */}
+              <label style={{
+                width: '27px', height: '27px', borderRadius: '50%', flexShrink: 0,
+                background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)',
+                border: '2px solid rgba(255,255,255,0.3)', cursor: 'pointer',
+                position: 'relative', overflow: 'hidden',
+              }}>
+                <input
+                  type="color"
+                  value={textColor}
+                  onChange={(e) => {
+                    setTextColor(e.target.value);
+                    if (activeOverlay?.type === 'text') updateActiveOverlay({ color: e.target.value });
+                  }}
+                  style={{ position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }}
+                />
+              </label>
             </div>
-            {activeOverlayId && overlays.find(o => o.id === activeOverlayId)?.type === 'text' && (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button onClick={() => adjustActiveScale(-0.15)} style={{ ...pillBtnStyle }}>A-</button>
-                <button onClick={() => adjustActiveScale(0.15)} style={{ ...pillBtnStyle }}>A+</button>
-                <button onClick={removeActiveOverlay} style={{ ...pillBtnStyle, color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <IoTrash /> Remove
-                </button>
-              </div>
+
+            {activeOverlay?.type === 'text' && (
+              <button onClick={removeActiveOverlay} style={{ ...pillBtnStyle, color: '#ef4444', alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <IoTrash /> Remove selected text
+              </button>
             )}
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>Drag the text on the photo to reposition it.</p>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>Tap a text on the photo to select it, then adjust size/color. Drag to reposition.</p>
           </div>
         )}
 
         {tab === 'stickers' && (
           <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              {STICKERS.map((emoji) => (
-                <button key={emoji} onClick={() => addSticker(emoji)} style={{
-                  width: '42px', height: '42px', borderRadius: '12px', background: chipBg,
-                  border: 'none', fontSize: '22px', cursor: 'pointer',
-                }}>
-                  {emoji}
-                </button>
-              ))}
-            </div>
-            {activeOverlayId && overlays.find(o => o.id === activeOverlayId)?.type === 'sticker' && (
+            <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} style={{
+              padding: '10px 16px', borderRadius: '14px', border: 'none',
+              background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
+              fontSize: '13px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter',
+              display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center',
+            }}>
+              <MdEmojiEmotions style={{ fontSize: '18px' }} /> {showEmojiPicker ? 'Close picker' : 'Open full emoji picker'}
+            </button>
+
+            {showEmojiPicker && (
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <EmojiPicker
+                  onEmojiClick={(emojiData) => addSticker(emojiData.emoji)}
+                  theme="dark"
+                  width="100%"
+                  height={320}
+                  searchDisabled={false}
+                  skinTonesDisabled={false}
+                  lazyLoadEmojis={true}
+                />
+              </div>
+            )}
+
+            {activeOverlay?.type === 'sticker' && (
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button onClick={() => adjustActiveScale(-0.15)} style={{ ...pillBtnStyle }}>Smaller</button>
                 <button onClick={() => adjustActiveScale(0.15)} style={{ ...pillBtnStyle }}>Bigger</button>
@@ -419,7 +480,7 @@ function ImageEditor({ imageSrc, onCancel, onConfirm }) {
                 </button>
               </div>
             )}
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>Tap a sticker to add it, then drag on the photo.</p>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>Tap a sticker to add it, then drag on the photo to position and resize.</p>
           </div>
         )}
 

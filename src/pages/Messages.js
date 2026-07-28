@@ -1,13 +1,136 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../ThemeContext';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getConversations } from '../services/apiService';
+import { getConversations, searchUsers } from '../services/apiService';
 import useIsDesktop from '../hooks/useIsDesktop';
 import ChatPanel from '../components/ChatPanel';
-import { IoArrowBack } from 'react-icons/io5';
+import { IoArrowBack, IoClose, IoSearch } from 'react-icons/io5';
 import { BiSearch } from 'react-icons/bi';
 import { HiOutlinePencilSquare } from 'react-icons/hi2';
-import { HiSparkles } from 'react-icons/hi';
+
+function NewMessageModal({ colors, isDark, chipBg, chipBorder, onClose, onSelectUser }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      setLoading(true);
+      const res = await searchUsers(query.trim());
+      if (res.success) setResults(res.users);
+      setLoading(false);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [query]);
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 99999,
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+    }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)' }} />
+      <div style={{
+        position: 'relative', width: '100%', maxWidth: '420px', margin: '60px 16px 0',
+        background: colors.bgCard, borderRadius: '22px',
+        border: `1px solid ${colors.border}`, overflow: 'hidden',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.35)', maxHeight: '75vh', display: 'flex', flexDirection: 'column',
+      }}>
+        <div style={{
+          padding: '18px 18px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          borderBottom: `1px solid ${colors.border}`,
+        }}>
+          <span style={{
+            fontSize: '16px', fontWeight: '800',
+            background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>
+            New Message
+          </span>
+          <button onClick={onClose} style={{
+            background: chipBg, border: 'none', width: '30px', height: '30px', borderRadius: '10px',
+            color: colors.textPrimary, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <IoClose />
+          </button>
+        </div>
+
+        <div style={{ padding: '14px 18px' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            background: colors.inputBg || colors.bgPrimary,
+            border: `1px solid ${colors.border}`,
+            borderRadius: '14px', padding: '10px 14px',
+          }}>
+            <IoSearch style={{ color: colors.textMuted, fontSize: '17px' }} />
+            <input
+              autoFocus
+              type="text"
+              placeholder="Search by username or name..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{
+                flex: 1, background: 'none', border: 'none', outline: 'none',
+                color: colors.textPrimary, fontSize: '14px', fontFamily: 'Inter',
+              }}
+            />
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px 10px' }}>
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '30px 0' }}>
+              <div style={{
+                width: '24px', height: '24px', borderRadius: '50%',
+                border: '3px solid rgba(108,99,255,0.2)', borderTop: '3px solid #6C63FF',
+                animation: 'spin 0.8s linear infinite',
+              }} />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : !query.trim() ? (
+            <p style={{ fontSize: '13px', color: colors.textMuted, textAlign: 'center', padding: '30px 20px' }}>
+              Search for someone to start a conversation ✨
+            </p>
+          ) : results.length === 0 ? (
+            <p style={{ fontSize: '13px', color: colors.textMuted, textAlign: 'center', padding: '30px 20px' }}>
+              No users found
+            </p>
+          ) : (
+            results.map((user) => (
+              <div
+                key={user._id}
+                onClick={() => onSelectUser(user)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '10px 8px', cursor: 'pointer', borderRadius: '14px',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = chipBg}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <div style={{
+                  width: '44px', height: '44px', borderRadius: '14px',
+                  background: user.photoURL ? `url(${user.photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+                  backgroundSize: 'cover', backgroundPosition: 'center',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '18px', flexShrink: 0,
+                }}>
+                  {!user.photoURL && (user.avatar || '🧑‍💻')}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: '13.5px', fontWeight: '700', color: colors.textPrimary }}>{user.name}</p>
+                  <p style={{ fontSize: '12px', color: colors.textMuted }}>@{user.username}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Messages() {
   const { colors, isDark } = useTheme();
@@ -18,6 +141,7 @@ function Messages() {
   const [search, setSearch] = useState('');
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showNewMessage, setShowNewMessage] = useState(false);
 
   useEffect(() => {
     loadConversations();
@@ -49,6 +173,11 @@ function Messages() {
   const chipBg = isDark ? 'rgba(255,255,255,0.06)' : '#f3eeff';
   const chipBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(108,99,255,0.15)';
 
+  const handleSelectNewUser = (user) => {
+    setShowNewMessage(false);
+    navigate(`/messages/${user.username}`);
+  };
+
   const ListPanel = (
     <div style={{
       width: isDesktop ? '380px' : '100%',
@@ -58,7 +187,6 @@ function Messages() {
       background: colors.bgPrimary, height: '100%',
       position: 'relative', overflow: 'hidden',
     }}>
-      {/* ambient glow */}
       <div style={{
         position: 'absolute', top: '-15%', left: '-10%', width: '260px', height: '260px',
         borderRadius: '50%', background: `radial-gradient(circle, rgba(108,99,255,${isDark ? 0.12 : 0.06}) 0%, transparent 70%)`,
@@ -81,21 +209,18 @@ function Messages() {
           </button>
         )}
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <HiSparkles style={{ color: '#6C63FF', fontSize: '15px' }} />
-            <span style={{
-              fontSize: '20px', fontWeight: '800',
-              background: 'linear-gradient(135deg, #6C63FF, #F72585)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>
-              Messages
-            </span>
-          </div>
+          <span style={{
+            fontSize: '20px', fontWeight: '800',
+            background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>
+            Messages
+          </span>
           <p style={{ fontSize: '11.5px', color: colors.textMuted, marginTop: '2px', fontWeight: '600' }}>
             {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button style={{
+        <button onClick={() => setShowNewMessage(true)} style={{
           width: '38px', height: '38px', borderRadius: '13px', flexShrink: 0,
           background: 'linear-gradient(135deg, #6C63FF, #F72585)', border: 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -161,7 +286,7 @@ function Messages() {
               Connect with creators and start learning together! ✨
             </p>
             <button
-              onClick={() => navigate('/explore')}
+              onClick={() => setShowNewMessage(true)}
               style={{
                 padding: '11px 24px',
                 background: 'linear-gradient(135deg, #6C63FF, #F72585)',
@@ -171,7 +296,7 @@ function Messages() {
                 boxShadow: '0 4px 14px rgba(108,99,255,0.35)',
               }}
             >
-              Find Creators 🚀
+              New Message 🚀
             </button>
           </div>
         ) : (
@@ -231,26 +356,36 @@ function Messages() {
     </div>
   );
 
-  if (!isDesktop) {
-    if (username) {
-      return (
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <ChatPanel username={username} onBack={() => navigate('/messages')} showBackButton />
-        </div>
-      );
-    }
-    return (
-      <div style={{ minHeight: '100vh', paddingBottom: 'var(--bottom-nav-height)' }}>
-        {ListPanel}
-      </div>
-    );
-  }
-
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
-      {ListPanel}
-      <ChatPanel username={username} showBackButton={false} />
-    </div>
+    <>
+      {!isDesktop ? (
+        username ? (
+          <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <ChatPanel username={username} onBack={() => navigate('/messages')} showBackButton />
+          </div>
+        ) : (
+          <div style={{ minHeight: '100vh', paddingBottom: 'var(--bottom-nav-height)' }}>
+            {ListPanel}
+          </div>
+        )
+      ) : (
+        <div style={{ display: 'flex', height: '100vh' }}>
+          {ListPanel}
+          <ChatPanel username={username} showBackButton={false} />
+        </div>
+      )}
+
+      {showNewMessage && (
+        <NewMessageModal
+          colors={colors}
+          isDark={isDark}
+          chipBg={chipBg}
+          chipBorder={chipBorder}
+          onClose={() => setShowNewMessage(false)}
+          onSelectUser={handleSelectNewUser}
+        />
+      )}
+    </>
   );
 }
 

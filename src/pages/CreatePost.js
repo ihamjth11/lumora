@@ -6,6 +6,7 @@ import { uploadPostMedia, createPost, uploadStoryMedia, createStory } from '../s
 import { IoArrowBack, IoClose, IoImagesOutline, IoVideocamOutline } from 'react-icons/io5';
 import { BsEmojiSmile } from 'react-icons/bs';
 import { HiSparkles } from 'react-icons/hi';
+import ImageEditor from '../components/ImageEditor';
 
 const categories = [
   'AI', 'Coding', 'Cooking', 'Design', 'Skills', 'Science', 'Business', 'Language',
@@ -55,28 +56,15 @@ function CreatePost() {
   const [uploadedType, setUploadedType] = useState('');
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
+  const [rawImageForEdit, setRawImageForEdit] = useState(null);
+
   const userAvatar = userProfile?.avatar || '🧑‍💻';
   const photoURL = userProfile?.photoURL || '';
 
   const chipBg = isDark ? 'rgba(255,255,255,0.06)' : '#f3eeff';
   const chipBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(108,99,255,0.15)';
 
-  const handleMediaSelect = async (e, kind) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const maxSize = kind === 'video' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      setError(`File too large. Max ${kind === 'video' ? '50MB' : '10MB'} allowed.`);
-      return;
-    }
-
-    setError('');
-    setMediaFile(file);
-    setMediaKind(kind);
-    setMediaPreview(URL.createObjectURL(file));
-    e.target.value = '';
-
+  const uploadFinalFile = async (file) => {
     setUploadingMedia(true);
     const res = postType === 'story' ? await uploadStoryMedia(file) : await uploadPostMedia(file);
     setUploadingMedia(false);
@@ -89,6 +77,45 @@ function CreatePost() {
       setMediaPreview('');
       setMediaFile(null);
     }
+  };
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File too large. Max 10MB allowed.');
+      return;
+    }
+
+    setError('');
+    e.target.value = '';
+    setRawImageForEdit(URL.createObjectURL(file));
+  };
+
+  const handleEditorConfirm = async (editedFile, editedPreviewUrl) => {
+    setRawImageForEdit(null);
+    setMediaFile(editedFile);
+    setMediaKind('image');
+    setMediaPreview(editedPreviewUrl);
+    await uploadFinalFile(editedFile);
+  };
+
+  const handleVideoSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      setError('File too large. Max 50MB allowed.');
+      return;
+    }
+
+    setError('');
+    setMediaFile(file);
+    setMediaKind('video');
+    setMediaPreview(URL.createObjectURL(file));
+    e.target.value = '';
+    await uploadFinalFile(file);
   };
 
   const handleRemoveMedia = () => {
@@ -156,6 +183,16 @@ function CreatePost() {
   const canShare = postType === 'story'
     ? !!uploadedUrl && !uploadingMedia
     : !!uploadedUrl && !!selectedCategory && !uploadingMedia;
+
+  if (rawImageForEdit) {
+    return (
+      <ImageEditor
+        imageSrc={rawImageForEdit}
+        onCancel={() => setRawImageForEdit(null)}
+        onConfirm={handleEditorConfirm}
+      />
+    );
+  }
 
   return (
     <div style={{
@@ -274,14 +311,14 @@ function CreatePost() {
           type="file"
           accept="image/*"
           ref={photoInputRef}
-          onChange={(e) => handleMediaSelect(e, 'image')}
+          onChange={handlePhotoSelect}
           style={{ display: 'none' }}
         />
         <input
           type="file"
           accept="video/*"
           ref={videoInputRef}
-          onChange={(e) => handleMediaSelect(e, 'video')}
+          onChange={handleVideoSelect}
           style={{ display: 'none' }}
         />
 
@@ -388,6 +425,21 @@ function CreatePost() {
             >
               <IoClose />
             </button>
+
+            {mediaKind === 'image' && !uploadingMedia && (
+              <button
+                onClick={() => setRawImageForEdit(mediaPreview)}
+                style={{
+                  position: 'absolute', bottom: '12px', right: '12px',
+                  padding: '8px 16px', borderRadius: '20px',
+                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)', border: 'none',
+                  color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter',
+                  boxShadow: '0 4px 14px rgba(124,58,237,0.4)',
+                }}
+              >
+                ✏️ Edit
+              </button>
+            )}
 
             {uploadedUrl && !uploadingMedia && (
               <div style={{

@@ -4,13 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   getProfileByUsername, getOrCreateConversation, getMessages, sendMessageWithMedia, uploadChatMedia,
-  toggleBlockUser, deleteMessage, clearChat, reportUserOrMessage
+  toggleBlockUser, deleteMessage, clearChat, reportUserOrMessage, reactToMessage, setTypingState, getTypingState
 } from '../services/apiService';
-import { IoArrowBack, IoSend, IoClose, IoMic, IoStop, IoEllipsisVertical, IoTrash, IoFlag, IoBan } from 'react-icons/io5';
+import { IoArrowBack, IoSend, IoClose, IoMic, IoStop, IoEllipsisVertical, IoTrash, IoFlag, IoBan, IoCheckmarkDone, IoCheckmark, IoArrowUndo } from 'react-icons/io5';
 import { HiOutlinePhotograph, HiOutlineCamera, HiOutlineFilm, HiSparkles } from 'react-icons/hi';
 import { MdVerified } from 'react-icons/md';
 import { FiPlus, FiMoreHorizontal } from 'react-icons/fi';
 import PostModal from './PostModal';
+
+const QUICK_REACTIONS = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
 
 function ChatPanel({ username, onBack, showBackButton }) {
   const { colors, isDark } = useTheme();
@@ -33,6 +35,9 @@ function ChatPanel({ username, onBack, showBackButton }) {
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [activeMsgMenu, setActiveMsgMenu] = useState(null);
+  const [reactionPickerFor, setReactionPickerFor] = useState(null);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [otherTyping, setOtherTyping] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
@@ -41,6 +46,8 @@ function ChatPanel({ username, onBack, showBackButton }) {
 
   const bottomRef = useRef(null);
   const pollRef = useRef(null);
+  const typingPollRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -53,10 +60,13 @@ function ChatPanel({ username, onBack, showBackButton }) {
     setMessages([]);
     setOtherUser(null);
     setConversationId(null);
+    setReplyingTo(null);
     initChat();
     return () => {
       clearInterval(pollRef.current);
+      clearInterval(typingPollRef.current);
       clearInterval(recordTimerRef.current);
+      clearTimeout(typingTimeoutRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username]);
@@ -89,6 +99,7 @@ function ChatPanel({ username, onBack, showBackButton }) {
       setConversationId(convRes.conversationId);
       await loadMessages(convRes.conversationId);
       pollRef.current = setInterval(() => loadMessages(convRes.conversationId), 3000);
+      typingPollRef.current = setInterval(() => pollTyping(convRes.conversationId), 2000);
     }
     setLoading(false);
   };
@@ -96,6 +107,18 @@ function ChatPanel({ username, onBack, showBackButton }) {
   const loadMessages = async (convId) => {
     const res = await getMessages(convId);
     if (res.success) setMessages(res.messages);
+  };
+
+  const pollTyping = async (convId) => {
+    const res = await getTypingState(convId);
+    if (res.success) setOtherTyping(res.typing);
+  };
+
+  const handleTextChange = (val) => {
+    setText(val);
+    if (conversationId) {
+      setTypingState(conversationId);
+    }
   };
 
   const handlePickFile = (e, kind) => {
@@ -159,10 +182,12 @@ function ChatPanel({ username, onBack, showBackButton }) {
     }
 
     const messageText = text.trim();
+    const replyId = replyingTo?._id || null;
     setText('');
     setPendingMedia(null);
+    setReplyingTo(null);
 
-    const res = await sendMessageWithMedia(conversationId, messageText, mediaUrl, mediaType);
+    const res = await sendMessageWithMedia(conversationId, messageText, mediaUrl, mediaType, replyId);
     if (res.success) {
       setMessages((prev) => [...prev, res.message]);
     }
@@ -204,15 +229,38 @@ function ChatPanel({ username, onBack, showBackButton }) {
     const res = await deleteMessage(messageId, forEveryone);
     if (res.success) {
       if (forEveryone) {
-        setMessages((prev) => prev.map((m) => m._id === messageId ? { ...m, deletedForEveryone: true, text: '', mediaUrl: '', mediaType: 'none', sharedPost: null } : m));
+        setMessages((prev) => prev.map((m) => m._id === messageId ? { ...m, deletedForEveryone: true, text: '', mediaUrl: '', mediaType: 'none', sharedPost: null, reactions: [] } : m));
       } else {
         setMessages((prev) => prev.filter((m) => m._id !== messageId));
       }
     }
   };
 
+  const handleReact = async (messageId, emoji) => {
+    setReactionPickerFor(null);
+    const res = await reactToMessage(messageId, emoji);
+    if (res.success) {
+      setMessages((prev) => prev.map((m) => m._id === messageId ? { ...m, reactions: res.reactions } : m));
+    }
+  };
+
+  const handleReply = (msg) => {
+    setActiveMsgMenu(null);
+    setReplyingTo(msg);
+  };
+
   const formatTime = (date) => new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const formatRecordTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+  const replyPreviewLabel = (msg) => {
+    if (!msg) return '';
+    if (msg.deletedForEveryone) return 'This message was deleted';
+    if (msg.mediaType === 'image') return '📷 Photo';
+    if (msg.mediaType === 'video') return '🎬 Video';
+    if (msg.mediaType === 'audio') return '🎤 Voice message';
+    if (msg.mediaType === 'post') return '📤 Shared post';
+    return msg.text || '';
+  };
 
   const accentColor = '#6C63FF';
   const inputBg = colors.inputBg || colors.bgCard;
@@ -294,6 +342,8 @@ function ChatPanel({ username, onBack, showBackButton }) {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
         @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes typingDot { 0%,60%,100% { transform: translateY(0); opacity:0.4; } 30% { transform: translateY(-4px); opacity:1; } }
+        @keyframes popIn { from { transform: scale(0.5); opacity:0; } to { transform: scale(1); opacity:1; } }
       `}</style>
 
       {/* Header */}
@@ -328,8 +378,8 @@ function ChatPanel({ username, onBack, showBackButton }) {
             <span style={{ fontSize: '14px', fontWeight: '700', color: colors.textPrimary }}>{otherUser.name}</span>
             <MdVerified style={{ color: accentColor, fontSize: '13px' }} />
           </div>
-          <span style={{ fontSize: '11px', color: colors.textMuted }}>
-            {isBlocked ? 'Blocked' : `@${otherUser.username}`}
+          <span style={{ fontSize: '11px', color: otherTyping ? accentColor : colors.textMuted, fontWeight: otherTyping ? '700' : '400' }}>
+            {isBlocked ? 'Blocked' : otherTyping ? 'typing...' : `@${otherUser.username}`}
           </span>
         </div>
 
@@ -377,19 +427,21 @@ function ChatPanel({ username, onBack, showBackButton }) {
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', position: 'relative', zIndex: 2 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative', zIndex: 2 }}>
         {messages.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <p style={{ fontSize: '13px', color: colors.textMuted }}>Say hi to {otherUser.name}! 👋</p>
           </div>
         ) : (
-          messages.map((msg) => {
+          messages.map((msg, idx) => {
             const mine = msg.senderFirebaseUid === currentUser?.uid;
             const isDeleted = msg.deletedForEveryone;
+            const isLastMine = mine && idx === messages.length - 1;
             return (
               <div key={msg._id} style={{
                 display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start',
                 alignItems: 'flex-end', gap: '6px', animation: 'slideUp 0.25s ease',
+                position: 'relative',
               }}>
                 {!mine && (
                   <div style={{
@@ -420,6 +472,22 @@ function ChatPanel({ username, onBack, showBackButton }) {
                         borderRadius: '12px', overflow: 'hidden', minWidth: '170px',
                         boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
                       }}>
+                        <button onClick={() => handleReply(msg)} style={{
+                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
+                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                          color: colors.textPrimary, fontSize: '12.5px', fontFamily: 'Inter',
+                          borderBottom: `1px solid ${colors.border}`,
+                        }}>
+                          <IoArrowUndo /> Reply
+                        </button>
+                        <button onClick={() => { setActiveMsgMenu(null); setReactionPickerFor(msg._id); }} style={{
+                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
+                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                          color: colors.textPrimary, fontSize: '12.5px', fontFamily: 'Inter',
+                          borderBottom: `1px solid ${colors.border}`,
+                        }}>
+                          😀 React
+                        </button>
                         <button onClick={() => handleDeleteMessage(msg._id, false)} style={{
                           width: '100%', padding: '10px 14px', background: 'none', border: 'none',
                           display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
@@ -440,13 +508,12 @@ function ChatPanel({ username, onBack, showBackButton }) {
                   </div>
                 )}
                 {!mine && !isDeleted && (
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative', order: 2 }}>
                     <button
                       onClick={() => setActiveMsgMenu(activeMsgMenu === msg._id ? null : msg._id)}
                       style={{
                         background: 'none', border: 'none', cursor: 'pointer', padding: '4px',
                         color: colors.textMuted, fontSize: '14px', display: 'flex', alignItems: 'center',
-                        order: 2,
                       }}>
                       <FiMoreHorizontal />
                     </button>
@@ -457,6 +524,22 @@ function ChatPanel({ username, onBack, showBackButton }) {
                         borderRadius: '12px', overflow: 'hidden', minWidth: '150px',
                         boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
                       }}>
+                        <button onClick={() => handleReply(msg)} style={{
+                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
+                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                          color: colors.textPrimary, fontSize: '12.5px', fontFamily: 'Inter',
+                          borderBottom: `1px solid ${colors.border}`,
+                        }}>
+                          <IoArrowUndo /> Reply
+                        </button>
+                        <button onClick={() => { setActiveMsgMenu(null); setReactionPickerFor(msg._id); }} style={{
+                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
+                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                          color: colors.textPrimary, fontSize: '12.5px', fontFamily: 'Inter',
+                          borderBottom: `1px solid ${colors.border}`,
+                        }}>
+                          😀 React
+                        </button>
                         <button onClick={() => handleDeleteMessage(msg._id, false)} style={{
                           width: '100%', padding: '10px 14px', background: 'none', border: 'none',
                           display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
@@ -469,7 +552,49 @@ function ChatPanel({ username, onBack, showBackButton }) {
                   </div>
                 )}
 
-                <div style={{ maxWidth: '340px' }}>
+                <div style={{ maxWidth: '340px', position: 'relative' }}>
+                  {reactionPickerFor === msg._id && (
+                    <div style={{
+                      position: 'absolute', bottom: '100%', marginBottom: '6px',
+                      left: mine ? 'auto' : 0, right: mine ? 0 : 'auto',
+                      background: colors.bgCard, border: `1px solid ${colors.border}`,
+                      borderRadius: '24px', padding: '6px 10px', display: 'flex', gap: '6px',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.25)', zIndex: 25, animation: 'popIn 0.15s ease',
+                    }}>
+                      {QUICK_REACTIONS.map((emoji) => (
+                        <button key={emoji} onClick={() => handleReact(msg._id, emoji)} style={{
+                          background: 'none', border: 'none', fontSize: '19px', cursor: 'pointer', padding: '2px',
+                        }}>
+                          {emoji}
+                        </button>
+                      ))}
+                      <button onClick={() => setReactionPickerFor(null)} style={{
+                        background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer',
+                        fontSize: '14px', display: 'flex', alignItems: 'center', paddingLeft: '2px',
+                      }}>
+                        <IoClose />
+                      </button>
+                    </div>
+                  )}
+
+                  {msg.replyTo && (
+                    <div style={{
+                      display: 'flex', flexDirection: 'column',
+                      borderLeft: `3px solid ${accentColor}`, paddingLeft: '8px',
+                      marginBottom: '4px', opacity: 0.75,
+                    }}>
+                      <span style={{ fontSize: '10.5px', fontWeight: '700', color: accentColor }}>
+                        {msg.replyTo.senderFirebaseUid === currentUser?.uid ? 'You' : otherUser.name}
+                      </span>
+                      <span style={{
+                        fontSize: '11.5px', color: colors.textMuted,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '260px',
+                      }}>
+                        {replyPreviewLabel(msg.replyTo)}
+                      </span>
+                    </div>
+                  )}
+
                   {isDeleted ? (
                     <div style={{
                       background: 'none', border: `1px dashed ${otherBubbleBorder}`,
@@ -559,15 +684,66 @@ function ChatPanel({ username, onBack, showBackButton }) {
                           <p style={{ fontSize: '14px', color: mine ? '#fff' : otherBubbleText, lineHeight: '1.4', wordBreak: 'break-word' }}>{msg.text}</p>
                         </div>
                       )}
+
+                      {msg.reactions && msg.reactions.length > 0 && (
+                        <div style={{
+                          display: 'flex', gap: '2px', marginTop: '-8px',
+                          justifyContent: mine ? 'flex-end' : 'flex-start', position: 'relative', zIndex: 1,
+                        }}>
+                          <div style={{
+                            background: colors.bgCard, border: `1px solid ${colors.border}`,
+                            borderRadius: '12px', padding: '2px 6px', fontSize: '12px',
+                            display: 'flex', gap: '2px', boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                          }}>
+                            {[...new Set(msg.reactions.map(r => r.emoji))].map((emoji) => (
+                              <span key={emoji}>{emoji}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
-                  <p style={{ fontSize: '10px', color: colors.textMuted, marginTop: '4px', textAlign: mine ? 'right' : 'left' }}>
-                    {formatTime(msg.createdAt)}
-                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
+                    <p style={{ fontSize: '10px', color: colors.textMuted }}>
+                      {formatTime(msg.createdAt)}
+                    </p>
+                    {isLastMine && (
+                      msg.read ? (
+                        <IoCheckmarkDone style={{ fontSize: '13px', color: accentColor }} />
+                      ) : (
+                        <IoCheckmark style={{ fontSize: '13px', color: colors.textMuted }} />
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
             );
           })
+        )}
+        {otherTyping && (
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
+            <div style={{
+              width: '26px', height: '26px', borderRadius: '9px',
+              background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #6C63FF, #F72585)',
+              backgroundSize: 'cover', backgroundPosition: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '12px', flexShrink: 0,
+            }}>
+              {!photoURL && avatar}
+            </div>
+            <div style={{
+              background: otherBubbleBg, border: `1px solid ${otherBubbleBorder}`,
+              borderRadius: '18px 18px 18px 4px', padding: '12px 16px',
+              display: 'flex', gap: '4px', alignItems: 'center',
+            }}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} style={{
+                  width: '6px', height: '6px', borderRadius: '50%', background: colors.textMuted,
+                  animation: `typingDot 1.2s ease infinite`, animationDelay: `${i * 0.15}s`,
+                }} />
+              ))}
+            </div>
+          </div>
         )}
         <div ref={bottomRef} />
       </div>
@@ -582,6 +758,36 @@ function ChatPanel({ username, onBack, showBackButton }) {
             <p style={{ fontSize: '12.5px', color: '#ef4444', fontWeight: '600' }}>
               You've blocked {otherUser.name}. Unblock to send messages.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Reply preview bar */}
+      {replyingTo && (
+        <div style={{ padding: '10px 16px 0', flexShrink: 0 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            background: colors.bgCard, border: `1px solid ${colors.border}`,
+            borderRadius: '14px', padding: '9px 12px',
+            borderLeft: `3px solid ${accentColor}`,
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: '11px', fontWeight: '700', color: accentColor }}>
+                Replying to {replyingTo.senderFirebaseUid === currentUser?.uid ? 'yourself' : otherUser.name}
+              </p>
+              <p style={{
+                fontSize: '12px', color: colors.textMuted,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {replyPreviewLabel(replyingTo)}
+              </p>
+            </div>
+            <button onClick={() => setReplyingTo(null)} style={{
+              background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer',
+              fontSize: '16px', display: 'flex', alignItems: 'center',
+            }}>
+              <IoClose />
+            </button>
           </div>
         </div>
       )}
@@ -702,7 +908,7 @@ function ChatPanel({ username, onBack, showBackButton }) {
                   type="text"
                   placeholder="Message..."
                   value={text}
-                  onChange={(e) => setText(e.target.value)}
+                  onChange={(e) => handleTextChange(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                   style={{
                     flex: 1, background: 'none', border: 'none', outline: 'none',

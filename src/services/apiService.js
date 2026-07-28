@@ -74,7 +74,7 @@ export const updateUserProfile = async (updates) => {
     return { success: false, error: error.message };
   }
 };
-// ---------- UPLOAD PROFILE PHOTO (Protected) ----------
+
 export const uploadProfilePhoto = async (file) => {
   try {
     const token = await getAuthToken();
@@ -95,7 +95,7 @@ export const uploadProfilePhoto = async (file) => {
     return { success: false, error: error.message };
   }
 };
-// ---------- UPLOAD POST MEDIA (Protected) ----------
+
 export const uploadPostMedia = async (file) => {
   try {
     const token = await getAuthToken();
@@ -115,7 +115,6 @@ export const uploadPostMedia = async (file) => {
   }
 };
 
-// ---------- CREATE POST (Protected) ----------
 export const createPost = async (postData) => {
   try {
     const token = await getAuthToken();
@@ -135,7 +134,6 @@ export const createPost = async (postData) => {
   }
 };
 
-// ---------- GET FEED (Public) ----------
 export const getFeed = async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/posts/feed`);
@@ -147,7 +145,6 @@ export const getFeed = async () => {
   }
 };
 
-// ---------- GET POSTS BY USER (Public) ----------
 export const getUserPosts = async (firebaseUid) => {
   try {
     const res = await fetch(`${API_BASE_URL}/posts/user/${firebaseUid}`);
@@ -159,7 +156,6 @@ export const getUserPosts = async (firebaseUid) => {
   }
 };
 
-// ---------- LIKE / UNLIKE POST (Protected) ----------
 export const toggleLikePost = async (postId) => {
   try {
     const token = await getAuthToken();
@@ -174,7 +170,7 @@ export const toggleLikePost = async (postId) => {
     return { success: false, error: error.message };
   }
 };
-// ---------- GET USER PROFILE BY USERNAME (Public) ----------
+
 export const getProfileByUsername = async (username) => {
   try {
     const res = await fetch(`${API_BASE_URL}/users/profile/${username}`);
@@ -186,7 +182,6 @@ export const getProfileByUsername = async (username) => {
   }
 };
 
-// ---------- SEARCH USERS (Public) ----------
 export const searchUsers = async (query) => {
   try {
     const res = await fetch(`${API_BASE_URL}/users/search/${query}`);
@@ -198,7 +193,6 @@ export const searchUsers = async (query) => {
   }
 };
 
-// ---------- FOLLOW / UNFOLLOW (Protected) ----------
 export const toggleFollow = async (targetUid) => {
   try {
     const token = await getAuthToken();
@@ -213,7 +207,7 @@ export const toggleFollow = async (targetUid) => {
     return { success: false, error: error.message };
   }
 };
-// ---------- ADD COMMENT (Protected) ----------
+
 export const addComment = async (postId, text) => {
   try {
     const token = await getAuthToken();
@@ -233,7 +227,6 @@ export const addComment = async (postId, text) => {
   }
 };
 
-// ---------- GET COMMENTS (Public) ----------
 export const getComments = async (postId) => {
   try {
     const res = await fetch(`${API_BASE_URL}/comments/${postId}`);
@@ -244,7 +237,7 @@ export const getComments = async (postId) => {
     return { success: false, error: error.message };
   }
 };
-// ---------- UPLOAD STORY MEDIA (Protected) ----------
+
 export const uploadStoryMedia = async (file) => {
   try {
     const token = await getAuthToken();
@@ -264,7 +257,6 @@ export const uploadStoryMedia = async (file) => {
   }
 };
 
-// ---------- CREATE STORY (Protected) ----------
 export const createStory = async (mediaUrl, mediaType) => {
   try {
     const token = await getAuthToken();
@@ -284,7 +276,6 @@ export const createStory = async (mediaUrl, mediaType) => {
   }
 };
 
-// ---------- GET ACTIVE STORIES (Public) ----------
 export const getActiveStories = async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/stories/active`);
@@ -296,7 +287,6 @@ export const getActiveStories = async () => {
   }
 };
 
-// ---------- GET MY STORIES (Protected) ----------
 export const getMyStories = async () => {
   try {
     const token = await getAuthToken();
@@ -311,7 +301,6 @@ export const getMyStories = async () => {
   }
 };
 
-// ---------- MARK STORY VIEWED (Protected) ----------
 export const markStoryViewed = async (storyId) => {
   try {
     const token = await getAuthToken();
@@ -324,7 +313,7 @@ export const markStoryViewed = async (storyId) => {
     return { success: false, error: error.message };
   }
 };
-// ---------- DELETE POST (Protected) ----------
+
 export const deletePost = async (postId) => {
   try {
     const token = await getAuthToken();
@@ -339,7 +328,7 @@ export const deletePost = async (postId) => {
     return { success: false, error: error.message };
   }
 };
-// ---------- GET MY CONVERSATIONS (Protected) ----------
+
 export const getConversations = async () => {
   try {
     const token = await getAuthToken();
@@ -354,7 +343,6 @@ export const getConversations = async () => {
   }
 };
 
-// ---------- GET OR CREATE CONVERSATION WITH USER (Protected) ----------
 export const getOrCreateConversation = async (targetUid) => {
   try {
     const token = await getAuthToken();
@@ -370,7 +358,6 @@ export const getOrCreateConversation = async (targetUid) => {
   }
 };
 
-// ---------- GET MESSAGES (Protected) ----------
 export const getMessages = async (conversationId) => {
   try {
     const token = await getAuthToken();
@@ -385,7 +372,6 @@ export const getMessages = async (conversationId) => {
   }
 };
 
-// ---------- SEND MESSAGE (Protected) ----------
 export const sendMessage = async (conversationId, text) => {
   try {
     const token = await getAuthToken();
@@ -404,7 +390,7 @@ export const sendMessage = async (conversationId, text) => {
     return { success: false, error: error.message };
   }
 };
-// ---------- UPLOAD CHAT MEDIA (Protected) ----------
+
 export const uploadChatMedia = async (file) => {
   try {
     const token = await getAuthToken();
@@ -424,8 +410,7 @@ export const uploadChatMedia = async (file) => {
   }
 };
 
-// ---------- SEND MESSAGE WITH MEDIA (Protected) ----------
-export const sendMessageWithMedia = async (conversationId, text, mediaUrl, mediaType) => {
+export const sendMessageWithMedia = async (conversationId, text, mediaUrl, mediaType, replyToId) => {
   try {
     const token = await getAuthToken();
     const res = await fetch(`${API_BASE_URL}/messages/${conversationId}`, {
@@ -434,7 +419,7 @@ export const sendMessageWithMedia = async (conversationId, text, mediaUrl, media
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ text, mediaUrl, mediaType }),
+      body: JSON.stringify({ text, mediaUrl, mediaType, replyToId: replyToId || null }),
     });
     const data = await res.json();
     if (!res.ok) return { success: false, error: data.message };
@@ -443,7 +428,7 @@ export const sendMessageWithMedia = async (conversationId, text, mediaUrl, media
     return { success: false, error: error.message };
   }
 };
-// ---------- GET SINGLE POST (Public) ----------
+
 export const getSinglePost = async (postId) => {
   try {
     const res = await fetch(`${API_BASE_URL}/posts/single/${postId}`);
@@ -455,7 +440,6 @@ export const getSinglePost = async (postId) => {
   }
 };
 
-// ---------- EDIT POST CAPTION (Protected) ----------
 export const editPostCaption = async (postId, caption) => {
   try {
     const token = await getAuthToken();
@@ -474,7 +458,7 @@ export const editPostCaption = async (postId, caption) => {
     return { success: false, error: error.message };
   }
 };
-// ---------- TOGGLE SAVE / UNSAVE POST (Protected) ----------
+
 export const toggleSavePost = async (postId) => {
   try {
     const token = await getAuthToken();
@@ -490,7 +474,6 @@ export const toggleSavePost = async (postId) => {
   }
 };
 
-// ---------- GET MY SAVED POSTS (Protected) ----------
 export const getSavedPosts = async () => {
   try {
     const token = await getAuthToken();
@@ -505,7 +488,6 @@ export const getSavedPosts = async () => {
   }
 };
 
-// ---------- GET MY LIKED POSTS (Protected) ----------
 export const getLikedPosts = async () => {
   try {
     const token = await getAuthToken();
@@ -519,7 +501,7 @@ export const getLikedPosts = async () => {
     return { success: false, error: error.message };
   }
 };
-// ---------- SEND SHARED POST TO CHAT (Protected) ----------
+
 export const sendSharedPost = async (conversationId, postId) => {
   try {
     const token = await getAuthToken();
@@ -538,7 +520,7 @@ export const sendSharedPost = async (conversationId, postId) => {
     return { success: false, error: error.message };
   }
 };
-// ---------- BLOCK / UNBLOCK USER (Protected) ----------
+
 export const toggleBlockUser = async (targetUid) => {
   try {
     const token = await getAuthToken();
@@ -554,7 +536,6 @@ export const toggleBlockUser = async (targetUid) => {
   }
 };
 
-// ---------- GET MY BLOCKED USERS (Protected) ----------
 export const getBlockedUsersList = async () => {
   try {
     const token = await getAuthToken();
@@ -569,7 +550,6 @@ export const getBlockedUsersList = async () => {
   }
 };
 
-// ---------- DELETE MESSAGE (for me or for everyone) (Protected) ----------
 export const deleteMessage = async (messageId, forEveryone) => {
   try {
     const token = await getAuthToken();
@@ -585,7 +565,6 @@ export const deleteMessage = async (messageId, forEveryone) => {
   }
 };
 
-// ---------- CLEAR / DELETE ENTIRE CHAT (Protected) ----------
 export const clearChat = async (conversationId) => {
   try {
     const token = await getAuthToken();
@@ -601,7 +580,6 @@ export const clearChat = async (conversationId) => {
   }
 };
 
-// ---------- REPORT USER / MESSAGE (Protected) ----------
 export const reportUserOrMessage = async (reportedFirebaseUid, targetType, targetId, reason) => {
   try {
     const token = await getAuthToken();
@@ -616,6 +594,55 @@ export const reportUserOrMessage = async (reportedFirebaseUid, targetType, targe
     const data = await res.json();
     if (!res.ok) return { success: false, error: data.message };
     return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- REACT TO MESSAGE (Protected) ----------
+export const reactToMessage = async (messageId, emoji) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/message/${messageId}/react`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ emoji }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, reactions: data.reactions };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- SET TYPING STATE (Protected) ----------
+export const setTypingState = async (conversationId) => {
+  try {
+    const token = await getAuthToken();
+    await fetch(`${API_BASE_URL}/messages/${conversationId}/typing`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- GET TYPING STATE (Protected) ----------
+export const getTypingState = async (conversationId) => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/messages/${conversationId}/typing`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, typing: data.typing };
   } catch (error) {
     return { success: false, error: error.message };
   }

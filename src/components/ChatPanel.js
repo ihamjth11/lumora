@@ -272,6 +272,8 @@ function ChatPanel({ username, onBack, showBackButton }) {
   const otherBubbleBg = isDark ? 'rgba(255,255,255,0.06)' : '#f3f2ff';
   const otherBubbleBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(108,99,255,0.1)';
   const otherBubbleText = colors.textPrimary;
+  const menuBg = isDark ? 'rgba(28,22,50,0.92)' : 'rgba(255,255,255,0.92)';
+  const menuBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(108,99,255,0.15)';
 
   if (!username) {
     return (
@@ -393,34 +395,36 @@ function ChatPanel({ username, onBack, showBackButton }) {
           </button>
           {showHeaderMenu && (
             <div style={{
-              position: 'absolute', top: '42px', right: 0, zIndex: 30,
-              background: colors.bgCard, border: `1px solid ${colors.border}`,
-              borderRadius: '16px', overflow: 'hidden', minWidth: '190px',
-              boxShadow: '0 10px 32px rgba(0,0,0,0.3)',
+              position: 'absolute', top: '46px', right: 0, zIndex: 30,
+              background: menuBg, backdropFilter: 'blur(24px) saturate(180%)',
+              border: `1px solid ${menuBorder}`,
+              borderRadius: '20px', overflow: 'hidden', minWidth: '210px', padding: '6px',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.35)', animation: 'popIn 0.15s ease',
             }}>
-              <button onClick={handleToggleBlock} style={{
-                width: '100%', padding: '12px 16px', background: 'none', border: 'none',
-                display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                color: colors.textPrimary, fontSize: '13px', fontFamily: 'Inter', fontWeight: '600',
-                borderBottom: `1px solid ${colors.border}`,
-              }}>
-                <IoBan style={{ fontSize: '16px' }} /> {isBlocked ? 'Unblock' : 'Block'} {otherUser.name}
-              </button>
-              <button onClick={() => { setShowHeaderMenu(false); setShowReportModal(true); }} style={{
-                width: '100%', padding: '12px 16px', background: 'none', border: 'none',
-                display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                color: '#F72585', fontSize: '13px', fontFamily: 'Inter', fontWeight: '600',
-                borderBottom: `1px solid ${colors.border}`,
-              }}>
-                <IoFlag style={{ fontSize: '16px' }} /> Report
-              </button>
-              <button onClick={() => { setShowHeaderMenu(false); setShowClearConfirm(true); }} style={{
-                width: '100%', padding: '12px 16px', background: 'none', border: 'none',
-                display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
-                color: '#ef4444', fontSize: '13px', fontFamily: 'Inter', fontWeight: '600',
-              }}>
-                <IoTrash style={{ fontSize: '16px' }} /> Delete Chat
-              </button>
+              {[
+                { icon: <IoBan />, label: `${isBlocked ? 'Unblock' : 'Block'} ${otherUser.name}`, color: '#6C63FF', onClick: handleToggleBlock },
+                { icon: <IoFlag />, label: 'Report', color: '#F72585', onClick: () => { setShowHeaderMenu(false); setShowReportModal(true); } },
+                { icon: <IoTrash />, label: 'Delete Chat', color: '#ef4444', onClick: () => { setShowHeaderMenu(false); setShowClearConfirm(true); } },
+              ].map((item, i) => (
+                <button key={i} onClick={item.onClick} style={{
+                  width: '100%', padding: '10px 12px', background: 'none', border: 'none',
+                  display: 'flex', alignItems: 'center', gap: '11px', cursor: 'pointer',
+                  color: colors.textPrimary, fontSize: '13px', fontFamily: 'Inter', fontWeight: '600',
+                  borderRadius: '13px', transition: 'background 0.15s',
+                }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = item.color + '12'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{
+                    width: '30px', height: '30px', borderRadius: '10px', flexShrink: 0,
+                    background: item.color + '18', color: item.color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px',
+                  }}>
+                    {item.icon}
+                  </div>
+                  <span style={{ color: item.color }}>{item.label}</span>
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -467,42 +471,36 @@ function ChatPanel({ username, onBack, showBackButton }) {
                     </button>
                     {activeMsgMenu === msg._id && (
                       <div style={{
-                        position: 'absolute', bottom: '28px', right: 0, zIndex: 20,
-                        background: colors.bgCard, border: `1px solid ${colors.border}`,
-                        borderRadius: '12px', overflow: 'hidden', minWidth: '170px',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                        position: 'absolute', bottom: '32px', right: 0, zIndex: 20,
+                        background: menuBg, backdropFilter: 'blur(24px) saturate(180%)',
+                        border: `1px solid ${menuBorder}`,
+                        borderRadius: '18px', overflow: 'hidden', minWidth: '180px', padding: '6px',
+                        boxShadow: '0 14px 36px rgba(0,0,0,0.3)', animation: 'popIn 0.15s ease',
                       }}>
-                        <button onClick={() => handleReply(msg)} style={{
-                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
-                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                          color: colors.textPrimary, fontSize: '12.5px', fontFamily: 'Inter',
-                          borderBottom: `1px solid ${colors.border}`,
-                        }}>
-                          <IoArrowUndo /> Reply
-                        </button>
-                        <button onClick={() => { setActiveMsgMenu(null); setReactionPickerFor(msg._id); }} style={{
-                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
-                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                          color: colors.textPrimary, fontSize: '12.5px', fontFamily: 'Inter',
-                          borderBottom: `1px solid ${colors.border}`,
-                        }}>
-                          😀 React
-                        </button>
-                        <button onClick={() => handleDeleteMessage(msg._id, false)} style={{
-                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
-                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                          color: colors.textPrimary, fontSize: '12.5px', fontFamily: 'Inter',
-                          borderBottom: `1px solid ${colors.border}`,
-                        }}>
-                          <IoTrash /> Delete for me
-                        </button>
-                        <button onClick={() => handleDeleteMessage(msg._id, true)} style={{
-                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
-                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                          color: '#ef4444', fontSize: '12.5px', fontFamily: 'Inter',
-                        }}>
-                          <IoTrash /> Delete for everyone
-                        </button>
+                        {[
+                          { icon: <IoArrowUndo />, label: 'Reply', color: '#6C63FF', onClick: () => handleReply(msg) },
+                          { icon: <span style={{ fontSize: '13px' }}>😀</span>, label: 'React', color: '#ffb020', onClick: () => { setActiveMsgMenu(null); setReactionPickerFor(msg._id); } },
+                          { icon: <IoTrash />, label: 'Delete for me', color: colors.textPrimary, onClick: () => handleDeleteMessage(msg._id, false) },
+                          { icon: <IoTrash />, label: 'Delete for everyone', color: '#ef4444', onClick: () => handleDeleteMessage(msg._id, true) },
+                        ].map((item, i) => (
+                          <button key={i} onClick={item.onClick} style={{
+                            width: '100%', padding: '9px 11px', background: 'none', border: 'none',
+                            display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                            fontSize: '12.5px', fontFamily: 'Inter', fontWeight: '600', borderRadius: '11px',
+                          }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = item.color + '14'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <div style={{
+                              width: '26px', height: '26px', borderRadius: '9px', flexShrink: 0,
+                              background: item.color + '18', color: item.color,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px',
+                            }}>
+                              {item.icon}
+                            </div>
+                            <span style={{ color: item.color }}>{item.label}</span>
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -519,34 +517,35 @@ function ChatPanel({ username, onBack, showBackButton }) {
                     </button>
                     {activeMsgMenu === msg._id && (
                       <div style={{
-                        position: 'absolute', bottom: '28px', left: 0, zIndex: 20,
-                        background: colors.bgCard, border: `1px solid ${colors.border}`,
-                        borderRadius: '12px', overflow: 'hidden', minWidth: '150px',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                        position: 'absolute', bottom: '32px', left: 0, zIndex: 20,
+                        background: menuBg, backdropFilter: 'blur(24px) saturate(180%)',
+                        border: `1px solid ${menuBorder}`,
+                        borderRadius: '18px', overflow: 'hidden', minWidth: '170px', padding: '6px',
+                        boxShadow: '0 14px 36px rgba(0,0,0,0.3)', animation: 'popIn 0.15s ease',
                       }}>
-                        <button onClick={() => handleReply(msg)} style={{
-                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
-                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                          color: colors.textPrimary, fontSize: '12.5px', fontFamily: 'Inter',
-                          borderBottom: `1px solid ${colors.border}`,
-                        }}>
-                          <IoArrowUndo /> Reply
-                        </button>
-                        <button onClick={() => { setActiveMsgMenu(null); setReactionPickerFor(msg._id); }} style={{
-                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
-                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                          color: colors.textPrimary, fontSize: '12.5px', fontFamily: 'Inter',
-                          borderBottom: `1px solid ${colors.border}`,
-                        }}>
-                          😀 React
-                        </button>
-                        <button onClick={() => handleDeleteMessage(msg._id, false)} style={{
-                          width: '100%', padding: '10px 14px', background: 'none', border: 'none',
-                          display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                          color: colors.textPrimary, fontSize: '12.5px', fontFamily: 'Inter',
-                        }}>
-                          <IoTrash /> Delete for me
-                        </button>
+                        {[
+                          { icon: <IoArrowUndo />, label: 'Reply', color: '#6C63FF', onClick: () => handleReply(msg) },
+                          { icon: <span style={{ fontSize: '13px' }}>😀</span>, label: 'React', color: '#ffb020', onClick: () => { setActiveMsgMenu(null); setReactionPickerFor(msg._id); } },
+                          { icon: <IoTrash />, label: 'Delete for me', color: colors.textPrimary, onClick: () => handleDeleteMessage(msg._id, false) },
+                        ].map((item, i) => (
+                          <button key={i} onClick={item.onClick} style={{
+                            width: '100%', padding: '9px 11px', background: 'none', border: 'none',
+                            display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                            fontSize: '12.5px', fontFamily: 'Inter', fontWeight: '600', borderRadius: '11px',
+                          }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = item.color + '14'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <div style={{
+                              width: '26px', height: '26px', borderRadius: '9px', flexShrink: 0,
+                              background: item.color + '18', color: item.color,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px',
+                            }}>
+                              {item.icon}
+                            </div>
+                            <span style={{ color: item.color }}>{item.label}</span>
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -555,22 +554,30 @@ function ChatPanel({ username, onBack, showBackButton }) {
                 <div style={{ maxWidth: '340px', position: 'relative' }}>
                   {reactionPickerFor === msg._id && (
                     <div style={{
-                      position: 'absolute', bottom: '100%', marginBottom: '6px',
+                      position: 'absolute', bottom: '100%', marginBottom: '10px',
                       left: mine ? 'auto' : 0, right: mine ? 0 : 'auto',
-                      background: colors.bgCard, border: `1px solid ${colors.border}`,
-                      borderRadius: '24px', padding: '6px 10px', display: 'flex', gap: '6px',
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.25)', zIndex: 25, animation: 'popIn 0.15s ease',
+                      background: isDark ? 'rgba(28,22,50,0.95)' : 'rgba(255,255,255,0.95)',
+                      backdropFilter: 'blur(24px) saturate(180%)',
+                      border: `1px solid ${menuBorder}`,
+                      borderRadius: '28px', padding: '8px 12px', display: 'flex', gap: '4px', alignItems: 'center',
+                      boxShadow: '0 16px 40px rgba(0,0,0,0.3)', zIndex: 25, animation: 'popIn 0.15s ease',
                     }}>
                       {QUICK_REACTIONS.map((emoji) => (
                         <button key={emoji} onClick={() => handleReact(msg._id, emoji)} style={{
-                          background: 'none', border: 'none', fontSize: '19px', cursor: 'pointer', padding: '2px',
-                        }}>
+                          background: 'none', border: 'none', fontSize: '21px', cursor: 'pointer',
+                          padding: '4px', borderRadius: '50%', transition: 'transform 0.15s',
+                        }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.3)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        >
                           {emoji}
                         </button>
                       ))}
+                      <div style={{ width: '1px', height: '20px', background: colors.border, margin: '0 2px' }} />
                       <button onClick={() => setReactionPickerFor(null)} style={{
-                        background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer',
-                        fontSize: '14px', display: 'flex', alignItems: 'center', paddingLeft: '2px',
+                        background: chipBg, border: 'none', color: colors.textMuted, cursor: 'pointer',
+                        fontSize: '13px', width: '24px', height: '24px', borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
                         <IoClose />
                       </button>

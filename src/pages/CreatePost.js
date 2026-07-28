@@ -7,16 +7,25 @@ import { IoArrowBack, IoClose, IoImagesOutline, IoVideocamOutline } from 'react-
 import { BsEmojiSmile } from 'react-icons/bs';
 import { HiSparkles } from 'react-icons/hi';
 
-const categories = ['AI', 'Coding', 'Cooking', 'Design', 'Skills', 'Science', 'Business', 'Language'];
+const categories = [
+  'AI', 'Coding', 'Cooking', 'Design', 'Skills', 'Science', 'Business', 'Language',
+  'Fitness', 'Photography', 'Music', 'Writing', 'Travel', 'Finance', 'Marketing', 'Art',
+];
 const categoryColors = {
   AI: '#7c3aed', Coding: '#0ea5e9', Cooking: '#f97316',
   Design: '#ec4899', Skills: '#10b981', Science: '#f59e0b',
   Business: '#6366f1', Language: '#14b8a6',
+  Fitness: '#ef4444', Photography: '#8b5cf6', Music: '#f43f5e',
+  Writing: '#0891b2', Travel: '#22c55e', Finance: '#eab308',
+  Marketing: '#d946ef', Art: '#fb7185',
 };
 const categoryEmojis = {
   AI: '🤖', Coding: '💻', Cooking: '🍳',
   Design: '🎨', Skills: '⚡', Science: '🔬',
   Business: '📈', Language: '🌍',
+  Fitness: '🏋️', Photography: '📷', Music: '🎵',
+  Writing: '✍️', Travel: '✈️', Finance: '💰',
+  Marketing: '📣', Art: '🖌️',
 };
 
 const TYPE_META = {
@@ -218,38 +227,43 @@ function CreatePost() {
 
       {/* Post Type Toggle */}
       <div style={{
-        display: 'flex', gap: '8px',
-        padding: '16px', margin: '16px 16px 0',
-        background: colors.bgCard,
-        borderRadius: '20px',
-        border: `1px solid ${colors.border}`,
-        boxShadow: isDark ? 'none' : '0 4px 16px rgba(108,99,255,0.06)',
+        display: 'flex', gap: '6px',
+        padding: '7px', margin: '16px 16px 0',
+        background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(124,58,237,0.05)',
+        borderRadius: '22px',
+        border: `1px solid ${chipBorder}`,
         position: 'relative', zIndex: 1,
       }}>
-        {['post', 'story', 'reel'].map((type) => (
-          <button
-            key={type}
-            onClick={() => handleTypeSwitch(type)}
-            style={{
-              flex: 1, padding: '11px',
-              borderRadius: '14px', border: 'none',
-              background: postType === type
-                ? 'linear-gradient(135deg, #7c3aed, #a855f7)'
-                : 'transparent',
-              color: postType === type ? '#fff' : colors.textMuted,
-              fontSize: '13px', fontWeight: '700',
-              cursor: 'pointer', fontFamily: 'Inter',
-              transition: 'all 0.2s',
-              boxShadow: postType === type ? '0 4px 14px rgba(124,58,237,0.3)' : 'none',
-            }}
-          >
-            {TYPE_META[type].emoji} {TYPE_META[type].label}
-          </button>
-        ))}
+        {['post', 'story', 'reel'].map((type) => {
+          const active = postType === type;
+          return (
+            <button
+              key={type}
+              onClick={() => handleTypeSwitch(type)}
+              style={{
+                flex: 1, padding: '12px 8px',
+                borderRadius: '16px', border: 'none',
+                background: active
+                  ? 'linear-gradient(135deg, #7c3aed, #a855f7, #ec4899)'
+                  : 'transparent',
+                color: active ? '#fff' : colors.textMuted,
+                fontSize: '13px', fontWeight: '800',
+                cursor: 'pointer', fontFamily: 'Inter',
+                transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                boxShadow: active ? '0 6px 20px rgba(124,58,237,0.4)' : 'none',
+                transform: active ? 'scale(1.02)' : 'scale(1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              }}
+            >
+              <span style={{ fontSize: '15px' }}>{TYPE_META[type].emoji}</span>
+              {TYPE_META[type].label}
+            </button>
+          );
+        })}
       </div>
 
       <div style={{ padding: '10px 16px 0', position: 'relative', zIndex: 1 }}>
-        <p style={{ fontSize: '12px', color: colors.textMuted, textAlign: 'center' }}>
+        <p style={{ fontSize: '12px', color: colors.textMuted, textAlign: 'center', fontWeight: '500' }}>
           {TYPE_META[postType].desc}
         </p>
       </div>
@@ -442,25 +456,41 @@ function CreatePost() {
             <p style={{ fontSize: '13px', fontWeight: '700', color: colors.textPrimary, marginBottom: '12px' }}>
               Select Category
             </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  style={{
-                    padding: '9px 16px',
-                    borderRadius: '20px',
-                    border: `1px solid ${selectedCategory === cat ? categoryColors[cat] : colors.border}`,
-                    background: selectedCategory === cat ? `${categoryColors[cat]}15` : colors.bgCard,
-                    color: selectedCategory === cat ? categoryColors[cat] : colors.textSecondary,
-                    fontSize: '13px', fontWeight: '600',
-                    cursor: 'pointer', fontFamily: 'Inter',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {categoryEmojis[cat]} {cat}
-                </button>
-              ))}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '9px' }}>
+              {categories.map((cat) => {
+                const active = selectedCategory === cat;
+                const c = categoryColors[cat];
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '7px',
+                      padding: '7px 14px 7px 7px',
+                      borderRadius: '24px',
+                      border: `1.5px solid ${active ? c : colors.border}`,
+                      background: active ? `${c}18` : colors.bgCard,
+                      color: active ? c : colors.textSecondary,
+                      fontSize: '12.5px', fontWeight: '700',
+                      cursor: 'pointer', fontFamily: 'Inter',
+                      transition: 'all 0.2s',
+                      boxShadow: active ? `0 4px 14px ${c}30` : 'none',
+                      transform: active ? 'translateY(-1px)' : 'none',
+                    }}
+                  >
+                    <span style={{
+                      width: '24px', height: '24px', borderRadius: '50%',
+                      background: active ? c : `${c}18`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '13px', flexShrink: 0,
+                      transition: 'background 0.2s',
+                    }}>
+                      {categoryEmojis[cat]}
+                    </span>
+                    {cat}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </>

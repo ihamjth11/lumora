@@ -7,6 +7,7 @@ import { IoArrowBack, IoClose, IoImagesOutline, IoVideocamOutline } from 'react-
 import { BsEmojiSmile } from 'react-icons/bs';
 import { HiSparkles } from 'react-icons/hi';
 import ImageEditor from '../components/ImageEditor';
+import VideoTrimmer from '../components/VideoTrimmer';
 
 const categories = [
   'AI', 'Coding', 'Cooking', 'Design', 'Skills', 'Science', 'Business', 'Language',
@@ -57,6 +58,7 @@ function CreatePost() {
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const [rawImageForEdit, setRawImageForEdit] = useState(null);
+  const [rawVideoForTrim, setRawVideoForTrim] = useState(null);
 
   const userAvatar = userProfile?.avatar || '🧑‍💻';
   const photoURL = userProfile?.photoURL || '';
@@ -101,7 +103,7 @@ function CreatePost() {
     await uploadFinalFile(editedFile);
   };
 
-  const handleVideoSelect = async (e) => {
+  const handleVideoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -111,11 +113,20 @@ function CreatePost() {
     }
 
     setError('');
-    setMediaFile(file);
-    setMediaKind('video');
-    setMediaPreview(URL.createObjectURL(file));
     e.target.value = '';
-    await uploadFinalFile(file);
+    setRawVideoForTrim(URL.createObjectURL(file));
+  };
+
+  const handleTrimConfirm = async (trimmedFile, trimmedPreviewUrl) => {
+    setRawVideoForTrim(null);
+    setMediaFile(trimmedFile);
+    setMediaKind('video');
+    setMediaPreview(trimmedPreviewUrl);
+    await uploadFinalFile(trimmedFile);
+  };
+
+  const handleTrimSkip = async (originalFile) => {
+    // Not used directly, kept for potential "skip trim" flow
   };
 
   const handleRemoveMedia = () => {
@@ -190,6 +201,16 @@ function CreatePost() {
         imageSrc={rawImageForEdit}
         onCancel={() => setRawImageForEdit(null)}
         onConfirm={handleEditorConfirm}
+      />
+    );
+  }
+
+  if (rawVideoForTrim) {
+    return (
+      <VideoTrimmer
+        videoSrc={rawVideoForTrim}
+        onCancel={() => setRawVideoForTrim(null)}
+        onConfirm={handleTrimConfirm}
       />
     );
   }
@@ -438,6 +459,21 @@ function CreatePost() {
                 }}
               >
                 ✏️ Edit
+              </button>
+            )}
+
+            {mediaKind === 'video' && !uploadingMedia && (
+              <button
+                onClick={() => setRawVideoForTrim(mediaPreview)}
+                style={{
+                  position: 'absolute', bottom: '12px', right: '12px',
+                  padding: '8px 16px', borderRadius: '20px',
+                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)', border: 'none',
+                  color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter',
+                  boxShadow: '0 4px 14px rgba(124,58,237,0.4)',
+                }}
+              >
+                ✂️ Re-trim
               </button>
             )}
 

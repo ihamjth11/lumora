@@ -3,11 +3,12 @@ import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { uploadPostMedia, createPost, uploadStoryMedia, createStory } from '../services/apiService';
-import { IoArrowBack, IoClose, IoImagesOutline, IoVideocamOutline } from 'react-icons/io5';
+import { IoArrowBack, IoClose, IoImagesOutline, IoVideocamOutline, IoTextOutline } from 'react-icons/io5';
 import { BsEmojiSmile } from 'react-icons/bs';
 import { HiSparkles } from 'react-icons/hi';
 import ImageEditor from '../components/ImageEditor';
 import VideoTrimmer from '../components/VideoTrimmer';
+import TextStoryCreator from '../components/TextStoryCreator';
 
 const categories = [
   'AI', 'Coding', 'Cooking', 'Design', 'Skills', 'Science', 'Business', 'Language',
@@ -59,6 +60,7 @@ function CreatePost() {
 
   const [rawImageForEdit, setRawImageForEdit] = useState(null);
   const [rawVideoForTrim, setRawVideoForTrim] = useState(null);
+  const [showTextStory, setShowTextStory] = useState(false);
 
   const userAvatar = userProfile?.avatar || '🧑‍💻';
   const photoURL = userProfile?.photoURL || '';
@@ -125,8 +127,12 @@ function CreatePost() {
     await uploadFinalFile(trimmedFile);
   };
 
-  const handleTrimSkip = async (originalFile) => {
-    // Not used directly, kept for potential "skip trim" flow
+  const handleTextStoryConfirm = async (file, previewUrl) => {
+    setShowTextStory(false);
+    setMediaFile(file);
+    setMediaKind('image');
+    setMediaPreview(previewUrl);
+    await uploadFinalFile(file);
   };
 
   const handleRemoveMedia = () => {
@@ -211,6 +217,15 @@ function CreatePost() {
         videoSrc={rawVideoForTrim}
         onCancel={() => setRawVideoForTrim(null)}
         onConfirm={handleTrimConfirm}
+      />
+    );
+  }
+
+  if (showTextStory) {
+    return (
+      <TextStoryCreator
+        onCancel={() => setShowTextStory(false)}
+        onConfirm={handleTextStoryConfirm}
       />
     );
   }
@@ -396,9 +411,31 @@ function CreatePost() {
                 </div>
                 <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600' }}>Video</span>
               </div>
+              {postType === 'story' && (
+                <div
+                  onClick={() => setShowTextStory(true)}
+                  style={{
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', gap: '8px', cursor: 'pointer',
+                  }}
+                >
+                  <div style={{
+                    width: '58px', height: '58px',
+                    borderRadius: '18px',
+                    background: 'linear-gradient(135deg, #7c3aed18, #a855f712)',
+                    border: `1px solid #7c3aed30`,
+                    display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', fontSize: '26px',
+                    color: '#7c3aed',
+                  }}>
+                    <IoTextOutline />
+                  </div>
+                  <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600' }}>Aa Text</span>
+                </div>
+              )}
             </div>
             <p style={{ fontSize: '13px', color: colors.textMuted }}>
-              {postType === 'reel' ? 'Tap to upload a vertical video' : 'Tap to upload photo or video'}
+              {postType === 'reel' ? 'Tap to upload a vertical video' : postType === 'story' ? 'Photo, video, or type a text story' : 'Tap to upload photo or video'}
             </p>
           </div>
         ) : (

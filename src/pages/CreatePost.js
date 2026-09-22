@@ -3,12 +3,14 @@ import { useTheme } from '../ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { uploadPostMedia, createPost, uploadStoryMedia, createStory } from '../services/apiService';
-import { IoArrowBack, IoClose, IoImagesOutline, IoVideocamOutline, IoTextOutline } from 'react-icons/io5';
+import { IoArrowBack, IoClose, IoImagesOutline, IoVideocamOutline, IoTextOutline, IoBrushOutline, IoStatsChartOutline } from 'react-icons/io5';
 import { BsEmojiSmile } from 'react-icons/bs';
 import { HiSparkles } from 'react-icons/hi';
 import ImageEditor from '../components/ImageEditor';
 import VideoTrimmer from '../components/VideoTrimmer';
 import TextStoryCreator from '../components/TextStoryCreator';
+import StoryDrawingCanvas from '../components/StoryDrawingCanvas';
+import StoryInteractionCreator from '../components/StoryInteractionCreator';
 
 const categories = [
   'AI', 'Coding', 'Cooking', 'Design', 'Skills', 'Science', 'Business', 'Language',
@@ -61,6 +63,9 @@ function CreatePost() {
   const [rawImageForEdit, setRawImageForEdit] = useState(null);
   const [rawVideoForTrim, setRawVideoForTrim] = useState(null);
   const [showTextStory, setShowTextStory] = useState(false);
+  const [showDrawing, setShowDrawing] = useState(false);
+  const [showInteraction, setShowInteraction] = useState(false);
+  const [storyInteraction, setStoryInteraction] = useState(null);
 
   const userAvatar = userProfile?.avatar || '🧑‍💻';
   const photoURL = userProfile?.photoURL || '';
@@ -86,12 +91,7 @@ function CreatePost() {
   const handlePhotoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      setError('File too large. Max 10MB allowed.');
-      return;
-    }
-
+    if (file.size > 10 * 1024 * 1024) { setError('File too large. Max 10MB.'); return; }
     setError('');
     e.target.value = '';
     setRawImageForEdit(URL.createObjectURL(file));
@@ -108,12 +108,7 @@ function CreatePost() {
   const handleVideoSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    if (file.size > 50 * 1024 * 1024) {
-      setError('File too large. Max 50MB allowed.');
-      return;
-    }
-
+    if (file.size > 50 * 1024 * 1024) { setError('File too large. Max 50MB.'); return; }
     setError('');
     e.target.value = '';
     setRawVideoForTrim(URL.createObjectURL(file));
@@ -135,6 +130,19 @@ function CreatePost() {
     await uploadFinalFile(file);
   };
 
+  const handleDrawConfirm = async (file, previewUrl) => {
+    setShowDrawing(false);
+    setMediaFile(file);
+    setMediaKind('image');
+    setMediaPreview(previewUrl);
+    await uploadFinalFile(file);
+  };
+
+  const handleInteractionConfirm = (interactionData) => {
+    setStoryInteraction(interactionData);
+    setShowInteraction(false);
+  };
+
   const handleRemoveMedia = () => {
     setMediaFile(null);
     setMediaPreview('');
@@ -146,19 +154,14 @@ function CreatePost() {
   const handleTypeSwitch = (type) => {
     setPostType(type);
     handleRemoveMedia();
+    setStoryInteraction(null);
     setError('');
   };
 
   const handlePost = async () => {
     setError('');
-    if (!uploadedUrl) {
-      setError('Please upload a photo or video');
-      return;
-    }
-    if (uploadingMedia) {
-      setError('Please wait, media is still uploading...');
-      return;
-    }
+    if (!uploadedUrl) { setError('Please upload a photo or video'); return; }
+    if (uploadingMedia) { setError('Please wait, media is still uploading...'); return; }
 
     setPosting(true);
 
@@ -166,6 +169,17 @@ function CreatePost() {
       const res = await createStory(uploadedUrl, uploadedType);
       setPosting(false);
       if (res.success) {
+        // If there's a poll/question, create the interaction linked to story
+        if (storyInteraction && res.story?._id) {
+          const token = await import('../firebase/firebaseConfig').then(m => m.auth.currentUser?.getIdToken());
+          if (token) {
+            await fetch('https://lumora-x963.onrender.com/api/story-interactions/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ storyId: res.story._id, ...storyInteraction }),
+            });
+          }
+        }
         setPosted(true);
         setTimeout(() => navigate('/'), 1500);
       } else {
@@ -174,17 +188,11 @@ function CreatePost() {
       return;
     }
 
-    if (!selectedCategory) {
-      setPosting(false);
-      setError('Please select a category');
-      return;
-    }
+    if (!selectedCategory) { setPosting(false); setError('Please select a category'); return; }
 
     const res = await createPost({
-      mediaUrl: uploadedUrl,
-      mediaType: uploadedType,
-      caption,
-      category: selectedCategory,
+      mediaUrl: uploadedUrl, mediaType: uploadedType,
+      caption, category: selectedCategory,
       type: postType === 'reel' ? 'reel' : 'post',
     });
     setPosting(false);
@@ -201,44 +209,18 @@ function CreatePost() {
     ? !!uploadedUrl && !uploadingMedia
     : !!uploadedUrl && !!selectedCategory && !uploadingMedia;
 
-  if (rawImageForEdit) {
-    return (
-      <ImageEditor
-        imageSrc={rawImageForEdit}
-        onCancel={() => setRawImageForEdit(null)}
-        onConfirm={handleEditorConfirm}
-      />
-    );
-  }
-
-  if (rawVideoForTrim) {
-    return (
-      <VideoTrimmer
-        videoSrc={rawVideoForTrim}
-        onCancel={() => setRawVideoForTrim(null)}
-        onConfirm={handleTrimConfirm}
-      />
-    );
-  }
-
-  if (showTextStory) {
-    return (
-      <TextStoryCreator
-        onCancel={() => setShowTextStory(false)}
-        onConfirm={handleTextStoryConfirm}
-      />
-    );
-  }
+  if (rawImageForEdit) return <ImageEditor imageSrc={rawImageForEdit} onCancel={() => setRawImageForEdit(null)} onConfirm={handleEditorConfirm} />;
+  if (rawVideoForTrim) return <VideoTrimmer videoSrc={rawVideoForTrim} onCancel={() => setRawVideoForTrim(null)} onConfirm={handleTrimConfirm} />;
+  if (showTextStory) return <TextStoryCreator onCancel={() => setShowTextStory(false)} onConfirm={handleTextStoryConfirm} />;
+  if (showDrawing) return <StoryDrawingCanvas backgroundSrc={mediaPreview || null} onCancel={() => setShowDrawing(false)} onConfirm={handleDrawConfirm} />;
 
   return (
     <div style={{
       background: isDark
         ? 'linear-gradient(180deg, #0a0a12 0%, #14102a 30%, #0a0a12 100%)'
         : 'linear-gradient(180deg, #fafaff 0%, #f3f0ff 30%, #fafaff 100%)',
-      minHeight: '100vh',
-      paddingBottom: '20px',
-      fontFamily: 'Inter, sans-serif',
-      position: 'relative', overflow: 'hidden',
+      minHeight: '100vh', paddingBottom: '20px',
+      fontFamily: 'Inter, sans-serif', position: 'relative', overflow: 'hidden',
     }}>
       <div style={{
         position: 'absolute', top: '-10%', right: '-10%', width: '320px', height: '320px',
@@ -253,18 +235,14 @@ function CreatePost() {
         backdropFilter: 'blur(20px) saturate(180%)',
         borderBottom: `1px solid ${chipBorder}`,
         padding: '14px 16px',
-        display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         zIndex: 100, position: 'relative',
       }}>
-        <button
-          onClick={() => navigate('/')}
-          style={{
-            background: chipBg, border: 'none', width: '36px', height: '36px', borderRadius: '12px',
-            color: colors.textPrimary, fontSize: '18px',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
-        >
+        <button onClick={() => navigate('/')} style={{
+          background: chipBg, border: 'none', width: '36px', height: '36px', borderRadius: '12px',
+          color: colors.textPrimary, fontSize: '18px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
           <IoArrowBack />
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -272,62 +250,43 @@ function CreatePost() {
           <span style={{
             fontSize: '17px', fontWeight: '800',
             background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}>
-            Create
-          </span>
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>Create</span>
         </div>
-        <button
-          onClick={handlePost}
-          disabled={posting || !canShare}
-          style={{
-            background: canShare
-              ? 'linear-gradient(135deg, #7c3aed, #a855f7)'
-              : chipBg,
-            border: 'none', borderRadius: '12px',
-            padding: '8px 18px',
-            color: canShare ? '#fff' : colors.textMuted,
-            fontSize: '13.5px', fontWeight: '700',
-            cursor: (posting || !canShare) ? 'not-allowed' : 'pointer', fontFamily: 'Inter',
-            transition: 'all 0.2s', opacity: posting ? 0.7 : 1,
-            boxShadow: canShare ? '0 4px 14px rgba(124,58,237,0.35)' : 'none',
-          }}
-        >
+        <button onClick={handlePost} disabled={posting || !canShare} style={{
+          background: canShare ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : chipBg,
+          border: 'none', borderRadius: '12px', padding: '8px 18px',
+          color: canShare ? '#fff' : colors.textMuted,
+          fontSize: '13.5px', fontWeight: '700',
+          cursor: (posting || !canShare) ? 'not-allowed' : 'pointer', fontFamily: 'Inter',
+          transition: 'all 0.2s', opacity: posting ? 0.7 : 1,
+          boxShadow: canShare ? '0 4px 14px rgba(124,58,237,0.35)' : 'none',
+        }}>
           {posting ? 'Sharing...' : 'Share'}
         </button>
       </div>
 
-      {/* Post Type Toggle */}
+      {/* Type Toggle */}
       <div style={{
-        display: 'flex', gap: '6px',
-        padding: '7px', margin: '16px 16px 0',
+        display: 'flex', gap: '6px', padding: '7px',
+        margin: '16px 16px 0',
         background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(124,58,237,0.05)',
-        borderRadius: '22px',
-        border: `1px solid ${chipBorder}`,
+        borderRadius: '22px', border: `1px solid ${chipBorder}`,
         position: 'relative', zIndex: 1,
       }}>
         {['post', 'story', 'reel'].map((type) => {
           const active = postType === type;
           return (
-            <button
-              key={type}
-              onClick={() => handleTypeSwitch(type)}
-              style={{
-                flex: 1, padding: '12px 8px',
-                borderRadius: '16px', border: 'none',
-                background: active
-                  ? 'linear-gradient(135deg, #7c3aed, #a855f7, #ec4899)'
-                  : 'transparent',
-                color: active ? '#fff' : colors.textMuted,
-                fontSize: '13px', fontWeight: '800',
-                cursor: 'pointer', fontFamily: 'Inter',
-                transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                boxShadow: active ? '0 6px 20px rgba(124,58,237,0.4)' : 'none',
-                transform: active ? 'scale(1.02)' : 'scale(1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-              }}
-            >
+            <button key={type} onClick={() => handleTypeSwitch(type)} style={{
+              flex: 1, padding: '12px 8px', borderRadius: '16px', border: 'none',
+              background: active ? 'linear-gradient(135deg, #7c3aed, #a855f7, #ec4899)' : 'transparent',
+              color: active ? '#fff' : colors.textMuted,
+              fontSize: '13px', fontWeight: '800', cursor: 'pointer', fontFamily: 'Inter',
+              transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              boxShadow: active ? '0 6px 20px rgba(124,58,237,0.4)' : 'none',
+              transform: active ? 'scale(1.02)' : 'scale(1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            }}>
               <span style={{ fontSize: '15px' }}>{TYPE_META[type].emoji}</span>
               {TYPE_META[type].label}
             </button>
@@ -341,185 +300,98 @@ function CreatePost() {
         </p>
       </div>
 
-      {/* Media Upload / Preview */}
+      {/* Media area */}
       <div style={{ padding: '16px', position: 'relative', zIndex: 1 }}>
-        <input
-          type="file"
-          accept="image/*"
-          ref={photoInputRef}
-          onChange={handlePhotoSelect}
-          style={{ display: 'none' }}
-        />
-        <input
-          type="file"
-          accept="video/*"
-          ref={videoInputRef}
-          onChange={handleVideoSelect}
-          style={{ display: 'none' }}
-        />
+        <input type="file" accept="image/*" ref={photoInputRef} onChange={handlePhotoSelect} style={{ display: 'none' }} />
+        <input type="file" accept="video/*" ref={videoInputRef} onChange={handleVideoSelect} style={{ display: 'none' }} />
 
         {!mediaPreview ? (
           <div style={{
             height: postType === 'reel' ? '380px' : '220px',
-            background: colors.bgCard,
-            border: `2px dashed ${chipBorder}`,
-            borderRadius: '24px',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            gap: '16px',
+            background: colors.bgCard, border: `2px dashed ${chipBorder}`,
+            borderRadius: '24px', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '16px',
           }}>
-            <div style={{ display: 'flex', gap: '20px' }}>
-              {(postType !== 'reel') && (
-                <div
-                  onClick={() => photoInputRef.current?.click()}
-                  style={{
-                    display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', gap: '8px', cursor: 'pointer',
-                  }}
-                >
-                  <div style={{
-                    width: '58px', height: '58px',
-                    borderRadius: '18px',
-                    background: 'linear-gradient(135deg, #7c3aed18, #a855f712)',
-                    border: `1px solid #7c3aed30`,
-                    display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', fontSize: '26px',
-                    color: '#7c3aed',
-                  }}>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {postType !== 'reel' && (
+                <div onClick={() => photoInputRef.current?.click()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, #7c3aed18, #a855f712)', border: '1px solid #7c3aed30', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#7c3aed' }}>
                     <IoImagesOutline />
                   </div>
-                  <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600' }}>Photo</span>
+                  <span style={{ fontSize: '11.5px', color: colors.textMuted, fontWeight: '600' }}>Photo</span>
                 </div>
               )}
-              <div
-                onClick={() => videoInputRef.current?.click()}
-                style={{
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', gap: '8px', cursor: 'pointer',
-                }}
-              >
-                <div style={{
-                  width: '58px', height: '58px',
-                  borderRadius: '18px',
-                  background: 'linear-gradient(135deg, #7c3aed18, #a855f712)',
-                  border: `1px solid #7c3aed30`,
-                  display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', fontSize: '26px',
-                  color: '#7c3aed',
-                }}>
+              <div onClick={() => videoInputRef.current?.click()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, #7c3aed18, #a855f712)', border: '1px solid #7c3aed30', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#7c3aed' }}>
                   <IoVideocamOutline />
                 </div>
-                <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600' }}>Video</span>
+                <span style={{ fontSize: '11.5px', color: colors.textMuted, fontWeight: '600' }}>Video</span>
               </div>
               {postType === 'story' && (
-                <div
-                  onClick={() => setShowTextStory(true)}
-                  style={{
-                    display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', gap: '8px', cursor: 'pointer',
-                  }}
-                >
-                  <div style={{
-                    width: '58px', height: '58px',
-                    borderRadius: '18px',
-                    background: 'linear-gradient(135deg, #7c3aed18, #a855f712)',
-                    border: `1px solid #7c3aed30`,
-                    display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', fontSize: '26px',
-                    color: '#7c3aed',
-                  }}>
-                    <IoTextOutline />
+                <>
+                  <div onClick={() => setShowTextStory(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, #7c3aed18, #a855f712)', border: '1px solid #7c3aed30', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#7c3aed' }}>
+                      <IoTextOutline />
+                    </div>
+                    <span style={{ fontSize: '11.5px', color: colors.textMuted, fontWeight: '600' }}>Aa Text</span>
                   </div>
-                  <span style={{ fontSize: '12px', color: colors.textMuted, fontWeight: '600' }}>Aa Text</span>
-                </div>
+                  <div onClick={() => setShowDrawing(true)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <div style={{ width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, #7c3aed18, #a855f712)', border: '1px solid #7c3aed30', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#7c3aed' }}>
+                      <IoBrushOutline />
+                    </div>
+                    <span style={{ fontSize: '11.5px', color: colors.textMuted, fontWeight: '600' }}>Draw</span>
+                  </div>
+                </>
               )}
             </div>
             <p style={{ fontSize: '13px', color: colors.textMuted }}>
-              {postType === 'reel' ? 'Tap to upload a vertical video' : postType === 'story' ? 'Photo, video, or type a text story' : 'Tap to upload photo or video'}
+              {postType === 'reel' ? 'Tap to upload a vertical video' : postType === 'story' ? 'Photo, video, text, or draw' : 'Tap to upload photo or video'}
             </p>
           </div>
         ) : (
-          <div style={{
-            position: 'relative', borderRadius: '24px',
-            overflow: 'hidden', background: '#000',
-            boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
-          }}>
+          <div style={{ position: 'relative', borderRadius: '24px', overflow: 'hidden', background: '#000', boxShadow: '0 12px 32px rgba(0,0,0,0.25)' }}>
             {mediaKind === 'image' ? (
-              <img src={mediaPreview} alt="preview" style={{
-                width: '100%', maxHeight: '420px', objectFit: 'contain', display: 'block',
-              }} />
+              <img src={mediaPreview} alt="preview" style={{ width: '100%', maxHeight: '420px', objectFit: 'contain', display: 'block' }} />
             ) : (
-              <video src={mediaPreview} controls style={{
-                width: '100%', maxHeight: '420px', display: 'block',
-              }} />
+              <video src={mediaPreview} controls style={{ width: '100%', maxHeight: '420px', display: 'block' }} />
             )}
 
             {uploadingMedia && (
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'rgba(0,0,0,0.55)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexDirection: 'column', gap: '10px',
-              }}>
-                <div style={{
-                  width: '32px', height: '32px', borderRadius: '50%',
-                  border: '3px solid rgba(255,255,255,0.3)',
-                  borderTop: '3px solid #fff',
-                  animation: 'spin 0.8s linear infinite',
-                }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.3)', borderTop: '3px solid #fff', animation: 'spin 0.8s linear infinite' }} />
                 <span style={{ color: '#fff', fontSize: '13px', fontWeight: '600' }}>Uploading...</span>
               </div>
             )}
 
-            <button
-              onClick={handleRemoveMedia}
-              style={{
-                position: 'absolute', top: '12px', right: '12px',
-                width: '34px', height: '34px', borderRadius: '50%',
-                background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', border: 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#fff', fontSize: '18px', cursor: 'pointer',
-              }}
-            >
+            <button onClick={handleRemoveMedia} style={{ position: 'absolute', top: '12px', right: '12px', width: '34px', height: '34px', borderRadius: '50%', background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '18px', cursor: 'pointer' }}>
               <IoClose />
             </button>
 
-            {mediaKind === 'image' && !uploadingMedia && (
-              <button
-                onClick={() => setRawImageForEdit(mediaPreview)}
-                style={{
-                  position: 'absolute', bottom: '12px', right: '12px',
-                  padding: '8px 16px', borderRadius: '20px',
-                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)', border: 'none',
-                  color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter',
-                  boxShadow: '0 4px 14px rgba(124,58,237,0.4)',
-                }}
-              >
+            {/* Story tools row */}
+            {postType === 'story' && !uploadingMedia && (
+              <div style={{ position: 'absolute', bottom: '12px', left: '12px', display: 'flex', gap: '8px' }}>
+                <button onClick={() => setShowDrawing(true)} style={{ padding: '7px 14px', borderRadius: '20px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <IoBrushOutline /> Draw
+                </button>
+                <button onClick={() => setShowInteraction(true)} style={{ padding: '7px 14px', borderRadius: '20px', background: storyInteraction ? 'rgba(124,58,237,0.7)' : 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', border: `1px solid ${storyInteraction ? 'rgba(168,85,247,0.5)' : 'rgba(255,255,255,0.2)'}`, color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <IoStatsChartOutline /> {storyInteraction ? `${storyInteraction.type === 'poll' ? 'Poll' : 'Q'} added ✓` : 'Poll/Q'}
+                </button>
+              </div>
+            )}
+
+            {mediaKind === 'image' && !uploadingMedia && postType !== 'story' && (
+              <button onClick={() => setRawImageForEdit(mediaPreview)} style={{ position: 'absolute', bottom: '12px', right: '12px', padding: '8px 16px', borderRadius: '20px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', border: 'none', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter', boxShadow: '0 4px 14px rgba(124,58,237,0.4)' }}>
                 ✏️ Edit
               </button>
             )}
-
-            {mediaKind === 'video' && !uploadingMedia && (
-              <button
-                onClick={() => setRawVideoForTrim(mediaPreview)}
-                style={{
-                  position: 'absolute', bottom: '12px', right: '12px',
-                  padding: '8px 16px', borderRadius: '20px',
-                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)', border: 'none',
-                  color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter',
-                  boxShadow: '0 4px 14px rgba(124,58,237,0.4)',
-                }}
-              >
+            {mediaKind === 'video' && !uploadingMedia && postType !== 'story' && (
+              <button onClick={() => setRawVideoForTrim(mediaPreview)} style={{ position: 'absolute', bottom: '12px', right: '12px', padding: '8px 16px', borderRadius: '20px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', border: 'none', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter', boxShadow: '0 4px 14px rgba(124,58,237,0.4)' }}>
                 ✂️ Re-trim
               </button>
             )}
 
             {uploadedUrl && !uploadingMedia && (
-              <div style={{
-                position: 'absolute', top: '12px', left: '12px',
-                background: 'rgba(16,185,129,0.9)', backdropFilter: 'blur(8px)', borderRadius: '20px',
-                padding: '5px 12px',
-              }}>
+              <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'rgba(16,185,129,0.9)', backdropFilter: 'blur(8px)', borderRadius: '20px', padding: '5px 12px' }}>
                 <span style={{ color: '#fff', fontSize: '11px', fontWeight: '700' }}>✓ Uploaded</span>
               </div>
             )}
@@ -528,25 +400,13 @@ function CreatePost() {
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
 
-      {/* Caption + Category — only for Post/Reel */}
+      {/* Caption + Category */}
       {postType !== 'story' && (
         <>
           <div style={{ padding: '0 16px', position: 'relative', zIndex: 1 }}>
-            <div style={{
-              background: colors.bgCard,
-              border: `1px solid ${colors.border}`,
-              borderRadius: '20px',
-              padding: '16px',
-              boxShadow: isDark ? 'none' : '0 4px 16px rgba(108,99,255,0.05)',
-            }}>
+            <div style={{ background: colors.bgCard, border: `1px solid ${colors.border}`, borderRadius: '20px', padding: '16px', boxShadow: isDark ? 'none' : '0 4px 16px rgba(108,99,255,0.05)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <div style={{
-                  width: '38px', height: '38px', borderRadius: '13px',
-                  background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                  backgroundSize: 'cover', backgroundPosition: 'center',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
-                  flexShrink: 0,
-                }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '13px', background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #7c3aed, #a855f7)', backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
                   {!photoURL && userAvatar}
                 </div>
                 <textarea
@@ -554,62 +414,25 @@ function CreatePost() {
                   value={caption}
                   onChange={(e) => setCaption(e.target.value.slice(0, 300))}
                   rows={4}
-                  style={{
-                    flex: 1, background: 'none',
-                    border: 'none', outline: 'none',
-                    color: colors.textPrimary,
-                    fontSize: '14px', fontFamily: 'Inter',
-                    resize: 'none', lineHeight: '1.5',
-                  }}
+                  style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: colors.textPrimary, fontSize: '14px', fontFamily: 'Inter', resize: 'none', lineHeight: '1.5' }}
                 />
               </div>
-              <div style={{
-                display: 'flex', justifyContent: 'space-between',
-                alignItems: 'center', marginTop: '10px',
-                paddingTop: '10px',
-                borderTop: `1px solid ${colors.border}`,
-              }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${colors.border}` }}>
                 <BsEmojiSmile style={{ color: colors.textMuted, fontSize: '20px', cursor: 'pointer' }} />
-                <span style={{ fontSize: '12px', color: colors.textMuted }}>
-                  {caption.length}/300
-                </span>
+                <span style={{ fontSize: '12px', color: colors.textMuted }}>{caption.length}/300</span>
               </div>
             </div>
           </div>
 
           <div style={{ padding: '16px', position: 'relative', zIndex: 1 }}>
-            <p style={{ fontSize: '13px', fontWeight: '700', color: colors.textPrimary, marginBottom: '12px' }}>
-              Select Category
-            </p>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: colors.textPrimary, marginBottom: '12px' }}>Select Category</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '9px' }}>
               {categories.map((cat) => {
                 const active = selectedCategory === cat;
                 const c = categoryColors[cat];
                 return (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '7px',
-                      padding: '7px 14px 7px 7px',
-                      borderRadius: '24px',
-                      border: `1.5px solid ${active ? c : colors.border}`,
-                      background: active ? `${c}18` : colors.bgCard,
-                      color: active ? c : colors.textSecondary,
-                      fontSize: '12.5px', fontWeight: '700',
-                      cursor: 'pointer', fontFamily: 'Inter',
-                      transition: 'all 0.2s',
-                      boxShadow: active ? `0 4px 14px ${c}30` : 'none',
-                      transform: active ? 'translateY(-1px)' : 'none',
-                    }}
-                  >
-                    <span style={{
-                      width: '24px', height: '24px', borderRadius: '50%',
-                      background: active ? c : `${c}18`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '13px', flexShrink: 0,
-                      transition: 'background 0.2s',
-                    }}>
+                  <button key={cat} onClick={() => setSelectedCategory(cat)} style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '7px 14px 7px 7px', borderRadius: '24px', border: `1.5px solid ${active ? c : colors.border}`, background: active ? `${c}18` : colors.bgCard, color: active ? c : colors.textSecondary, fontSize: '12.5px', fontWeight: '700', cursor: 'pointer', fontFamily: 'Inter', transition: 'all 0.2s', boxShadow: active ? `0 4px 14px ${c}30` : 'none', transform: active ? 'translateY(-1px)' : 'none' }}>
+                    <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: active ? c : `${c}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', flexShrink: 0, transition: 'background 0.2s' }}>
                       {categoryEmojis[cat]}
                     </span>
                     {cat}
@@ -621,46 +444,31 @@ function CreatePost() {
         </>
       )}
 
-      {/* Error */}
       {error && (
         <div style={{ padding: '0 16px', position: 'relative', zIndex: 1 }}>
-          <div style={{
-            background: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.2)',
-            borderRadius: '14px', padding: '10px 14px',
-          }}>
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '14px', padding: '10px 14px' }}>
             <p style={{ fontSize: '13px', color: '#ef4444', fontWeight: '500' }}>{error}</p>
           </div>
         </div>
       )}
 
-      {/* Success Modal */}
       {posted && (
-        <div style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(0,0,0,0.7)',
-          zIndex: 9999,
-          display: 'flex', alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <div style={{
-            background: colors.bgCard,
-            borderRadius: '28px',
-            padding: '44px 32px',
-            textAlign: 'center',
-            margin: '0 24px',
-            border: `1px solid ${colors.border}`,
-            boxShadow: '0 20px 60px rgba(124,58,237,0.25)',
-          }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: colors.bgCard, borderRadius: '28px', padding: '44px 32px', textAlign: 'center', margin: '0 24px', border: `1px solid ${colors.border}`, boxShadow: '0 20px 60px rgba(124,58,237,0.25)' }}>
             <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
             <h2 style={{ fontSize: '22px', fontWeight: '800', color: colors.textPrimary, marginBottom: '8px' }}>
               {postType === 'story' ? 'Story shared!' : 'Posted!'}
             </h2>
-            <p style={{ fontSize: '14px', color: colors.textMuted }}>
-              Your {postType} is live on Lumora ✨
-            </p>
+            <p style={{ fontSize: '14px', color: colors.textMuted }}>Your {postType} is live on Lumora ✨</p>
           </div>
         </div>
+      )}
+
+      {showInteraction && (
+        <StoryInteractionCreator
+          onCancel={() => setShowInteraction(false)}
+          onConfirm={handleInteractionConfirm}
+        />
       )}
     </div>
   );

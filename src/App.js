@@ -13,6 +13,7 @@ import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import CreatePost from './pages/CreatePost';
 import Founder from './pages/Founder';
+import Notifications from './pages/Notifications';
 import BottomNav from './components/BottomNav';
 import DesktopSidebar from './components/DesktopSidebar';
 import SplashScreen from './components/SplashScreen';
@@ -38,6 +39,7 @@ function MainAppLayout() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/create" element={<CreatePost />} />
           <Route path="/founder" element={<Founder />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/edit-profile" element={<EditProfile />} />
           <Route path="/u/:username" element={<UserProfile />} />
         </Routes>
@@ -46,6 +48,7 @@ function MainAppLayout() {
     </div>
   );
 }
+
 function AppContent() {
   const { currentUser, userProfile, authLoading } = useAuth();
   const [splashDone, setSplashDone] = useState(false);

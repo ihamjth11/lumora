@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import LumoraLogo from './LumoraLogo';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../ThemeContext';
@@ -7,14 +7,26 @@ import { MdExplore, MdOutlineExplore } from 'react-icons/md';
 import { BiSearch } from 'react-icons/bi';
 import { BsBookmark, BsBookmarkFill } from 'react-icons/bs';
 import { RiUser3Line, RiUser3Fill } from 'react-icons/ri';
-import { FiSend, FiPlusSquare } from 'react-icons/fi';
+import { FiSend, FiPlusSquare, FiBell } from 'react-icons/fi';
 import { HiSparkles } from 'react-icons/hi';
+import { getNotifications } from '../services/apiService';
 
 function DesktopSidebar() {
   const { colors, isDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const res = await getNotifications();
+      if (res.success) setUnreadCount(res.unreadCount);
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const tabs = [
     { route: '/', icon: path === '/' ? <AiFillHome /> : <AiOutlineHome />, label: 'Home' },
@@ -22,6 +34,7 @@ function DesktopSidebar() {
     { route: '/search', icon: <BiSearch />, label: 'Search' },
     { route: '/create', icon: <FiPlusSquare />, label: 'Create' },
     { route: '/messages', icon: <FiSend />, label: 'Messages' },
+    { route: '/notifications', icon: <FiBell />, label: 'Notifications', badge: unreadCount },
     { route: '/saved', icon: path === '/saved' ? <BsBookmarkFill /> : <BsBookmark />, label: 'Saved' },
     { route: '/profile', icon: path === '/profile' ? <RiUser3Fill /> : <RiUser3Line />, label: 'Profile' },
     { route: '/founder', icon: <HiSparkles />, label: 'Founder' },
@@ -44,26 +57,26 @@ function DesktopSidebar() {
     }}>
       {/* Logo */}
       <div style={{
-  display: 'flex', alignItems: 'center', gap: '10px',
-  padding: '8px 12px', marginBottom: '24px', cursor: 'pointer',
-}} onClick={() => navigate('/')}>
-  <LumoraLogo size={36} />
-  <span style={{
-    fontSize: '22px', fontWeight: '900',
-    background: 'linear-gradient(135deg, #6C63FF, #F72585)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    letterSpacing: '-0.5px',
-  }}>
-    lumora
-  </span>
-</div>
+        display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '8px 12px', marginBottom: '24px', cursor: 'pointer',
+      }} onClick={() => navigate('/')}>
+        <LumoraLogo size={36} />
+        <span style={{
+          fontSize: '22px', fontWeight: '900',
+          background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          letterSpacing: '-0.5px',
+        }}>
+          lumora
+        </span>
+      </div>
 
       {/* Nav Items */}
       {tabs.map((tab) => (
         <button
           key={tab.route}
-          onClick={() => navigate(tab.route)}
+          onClick={() => { navigate(tab.route); if (tab.route === '/notifications') setUnreadCount(0); }}
           style={{
             display: 'flex', alignItems: 'center', gap: '14px',
             padding: '12px 14px', borderRadius: '14px',
@@ -75,11 +88,27 @@ function DesktopSidebar() {
               : '1px solid transparent',
             color: path === tab.route ? '#6C63FF' : colors.textSecondary,
             fontSize: '22px', cursor: 'pointer',
-            transition: 'all 0.2s', width: '100%',
-            textAlign: 'left',
+            transition: 'all 0.2s', width: '100%', textAlign: 'left',
+            position: 'relative',
           }}
         >
-          {tab.icon}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            {tab.icon}
+            {tab.badge > 0 && (
+              <div style={{
+                position: 'absolute', top: '-6px', right: '-8px',
+                background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+                borderRadius: '20px',
+                minWidth: '16px', height: '16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 4px',
+              }}>
+                <span style={{ color: '#fff', fontSize: '9px', fontWeight: '800' }}>
+                  {tab.badge > 99 ? '99+' : tab.badge}
+                </span>
+              </div>
+            )}
+          </div>
           <span style={{
             fontSize: '15px', fontWeight: path === tab.route ? '700' : '500',
             fontFamily: 'Inter', color: path === tab.route ? '#6C63FF' : colors.textSecondary,

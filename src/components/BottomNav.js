@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../ThemeContext';
 import useIsDesktop from '../hooks/useIsDesktop';
@@ -7,6 +7,8 @@ import { MdExplore, MdOutlineExplore } from 'react-icons/md';
 import { BiSearch } from 'react-icons/bi';
 import { BsBookmark, BsBookmarkFill } from 'react-icons/bs';
 import { RiUser3Line, RiUser3Fill } from 'react-icons/ri';
+import { FiBell } from 'react-icons/fi';
+import { getNotifications } from '../services/apiService';
 
 function BottomNav() {
   const navigate = useNavigate();
@@ -14,6 +16,17 @@ function BottomNav() {
   const path = location.pathname;
   const { colors } = useTheme();
   const isDesktop = useIsDesktop();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const res = await getNotifications();
+      if (res.success) setUnreadCount(res.unreadCount);
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (isDesktop) return null;
 
@@ -21,7 +34,12 @@ function BottomNav() {
     { route: '/', icon: path === '/' ? <AiFillHome /> : <AiOutlineHome />, label: 'Home' },
     { route: '/explore', icon: path === '/explore' ? <MdExplore /> : <MdOutlineExplore />, label: 'Explore' },
     { route: '/search', icon: <BiSearch />, label: 'Search' },
-    { route: '/saved', icon: path === '/saved' ? <BsBookmarkFill /> : <BsBookmark />, label: 'Saved' },
+    {
+      route: '/notifications',
+      icon: <FiBell />,
+      label: 'Activity',
+      badge: unreadCount,
+    },
     { route: '/profile', icon: path === '/profile' ? <RiUser3Fill /> : <RiUser3Line />, label: 'Profile' },
   ];
 
@@ -45,7 +63,10 @@ function BottomNav() {
       {tabs.map((tab) => (
         <button
           key={tab.route}
-          onClick={() => navigate(tab.route)}
+          onClick={() => {
+            navigate(tab.route);
+            if (tab.route === '/notifications') setUnreadCount(0);
+          }}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -57,9 +78,26 @@ function BottomNav() {
             fontSize: '22px',
             cursor: 'pointer',
             padding: '4px 12px',
+            position: 'relative',
           }}
         >
-          {tab.icon}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {tab.icon}
+            {tab.badge > 0 && (
+              <div style={{
+                position: 'absolute', top: '-6px', right: '-8px',
+                background: 'linear-gradient(135deg, #6C63FF, #F72585)',
+                borderRadius: '20px',
+                minWidth: '16px', height: '16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 4px',
+              }}>
+                <span style={{ color: '#fff', fontSize: '9px', fontWeight: '800' }}>
+                  {tab.badge > 99 ? '99+' : tab.badge}
+                </span>
+              </div>
+            )}
+          </div>
           <span style={{
             fontSize: '10px',
             fontFamily: 'Inter',

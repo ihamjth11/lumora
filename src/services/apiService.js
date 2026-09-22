@@ -647,3 +647,59 @@ export const getTypingState = async (conversationId) => {
     return { success: false, error: error.message };
   }
 };
+// ---------- GET NOTIFICATIONS (Protected) ----------
+export const getNotifications = async () => {
+  try {
+    const token = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/notifications`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.message };
+    return { success: true, notifications: data.notifications, unreadCount: data.unreadCount };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- MARK SINGLE NOTIFICATION READ (Protected) ----------
+export const markNotificationRead = async (id) => {
+  try {
+    const token = await getAuthToken();
+    await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- MARK ALL NOTIFICATIONS READ (Protected) ----------
+export const markAllNotificationsRead = async () => {
+  try {
+    const token = await getAuthToken();
+    await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ---------- DELETE NOTIFICATION (Protected) ----------
+export const deleteNotification = async (id) => {
+  try {
+    const token = await getAuthToken();
+    await fetch(`${API_BASE_URL}/notifications/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
